@@ -1,4 +1,4 @@
-import { DevelopmentEnvironment } from './runners/dev';
+import { DevelopmentEnvironment } from './scripts/dev';
 import { print, println } from './utils/print';
 import kleur from 'kleur';
 import { performance } from 'node:perf_hooks';
@@ -11,7 +11,7 @@ const env = new DevelopmentEnvironment;
 env
   .start()
   .then((_) => {
-		print(`✔️ done bootstrapping the development env! took ${(performance.now() - startTime).toFixed(2)}ms\n`);
+		print(`✔️ done bootstrapping the development server! took ${(performance.now() - startTime).toFixed(2)}ms\n`);
 	})
   .catch((err) => {
     print(err);
