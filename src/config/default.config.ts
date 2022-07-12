@@ -3,6 +3,14 @@ import type { HTTPVersion } from "find-my-way";
 import type Router from "find-my-way";
 import type { ListenOptions } from "node:net";
 import type { TransportMultiOptions } from "pino";
+import type { TAppConfiguration } from "./app.config";
+
+const AppConfig : Required<TAppConfiguration> = {
+	autoload : {
+		routes : './routes',
+		services : './services'
+	}
+};
 
 const DependencyInjectionConfig : ContainerOptions = {
 	injectionMode : InjectionMode.CLASSIC
@@ -38,6 +46,7 @@ const LoggerTransports : TransportMultiOptions['targets'] = [
 ];
 
 export const defaultConfig = {
+	app : AppConfig,
 	dependencyInjection : DependencyInjectionConfig,
 	logger : {
 		targets : LoggerTransports

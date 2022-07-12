@@ -1,0 +1,117 @@
+import { type AwilixContainer, Lifetime } from 'awilix';
+import { randomUUID } from 'crypto';
+import type { File } from 'formidable';
+import type PersistentFile from 'formidable/PersistentFile';
+import type { Class, JsonValue, Merge } from 'type-fest';
+import type { AnyZodObject, TypeOf, ZodBoolean, ZodNumber, ZodString, ZodType, ZodTypeDef } from 'zod';
+import type { HTTPIncomingHeaders, Route } from '../route/route.class';
+import { toDependencyResolver } from '../utils/to_dependency_resolver';
+
+export type TRequestBody = AnyZodObject;
+export type TRequestHeaders = { [name in HTTPIncomingHeaders]?: ZodString };
+export type TRequestCookies = { [name : string] : ZodString };
+export type TRequestURLParams = { [name : string] : ZodString };
+export type TRequestQueryParams = { [name : string] : ZodString | ZodNumber | ZodBoolean };
+export type TRequestFiles = Record<string, ZodType<PersistentFile, ZodTypeDef, PersistentFile>>;
+
+export class Request<
+  Body extends TRequestBody | undefined = undefined,
+  Headers extends TRequestHeaders | undefined = undefined,
+  Cookies extends TRequestCookies | undefined = undefined,
+  URLParams extends TRequestURLParams | undefined = undefined,
+  QueryParams extends TRequestQueryParams | undefined = undefined,
+  Files extends TRequestFiles | undefined = undefined
+  > {
+
+  id!: string;
+
+  _metadata!: Record<string, unknown>;
+
+  issuedAt!: Date;
+
+  headers!: Merge<
+    { [name in HTTPIncomingHeaders]?: string },
+    { [name in keyof NonNullable<Headers>]-?: string }
+  >;
+
+  body!: Body extends null | undefined ? undefined : TypeOf<NonNullable<Body>>;
+
+  urlParams?: URLParams extends null | undefined ? never : {
+    [name in keyof NonNullable<URLParams>]: string
+  };
+
+  queryParams?: QueryParams extends null | undefined ? never : {
+    [name in keyof NonNullable<QueryParams>]: TypeOf<NonNullable<QueryParams>[name]>
+  };
+
+  cookies?: Cookies extends null | undefined ? never : {
+    [name in keyof NonNullable<Cookies>]: string
+  };
+
+  files?: Files extends null | undefined ? never : {
+    [name in keyof NonNullable<Files>]: File
+  };
+
+	constructor(
+		private container : AwilixContainer,
+		public url : string,
+		public method : string
+	){
+		this._metadata = {};
+		this.id = randomUUID();
+		this.issuedAt = new Date();
+		this.method = method.toLocaleUpperCase();
+
+	}
+
+  provide(
+    name: string,
+    value: (Class<any> | ((...args: any) => any)) | JsonValue
+  ): void {
+		this.container.register(name, toDependencyResolver(value, Lifetime.SCOPED));
+	}
+
+}
+
+
+export interface IHTTPRequestContext {
+  route: Route;
+  container: AwilixContainer;
+}
+
+
+export type TRequestType<
+  Body extends TRequestBody | undefined = undefined,
+  Headers extends TRequestHeaders | undefined = undefined,
+  Cookies extends TRequestCookies | undefined = undefined,
+  URLParams extends TRequestURLParams | undefined = undefined,
+  QueryParams extends TRequestQueryParams | undefined = undefined,
+  Files extends TRequestFiles | undefined = undefined,
+  > = Omit<Request, "body" | "urlParams" | "queryParams" | "cookies" | "files">
+  & (Body extends undefined ? {} : { body: TypeOf<NonNullable<Body>> })
+  & (Headers extends undefined ? {} : {
+    headers: Merge<
+      { [name in HTTPIncomingHeaders]?: string },
+      { [name in keyof NonNullable<Headers>]-?: string }
+    >
+  })
+  & (Cookies extends undefined ? {} : {
+    cookies: {
+      [name in keyof NonNullable<Cookies>]: string
+    }
+  })
+  & (URLParams extends undefined ? {} : {
+    urlParams: {
+      [name in keyof NonNullable<URLParams>]: string
+    }
+  })
+  & (QueryParams extends undefined ? {} : {
+    queryParams: {
+      [name in keyof NonNullable<QueryParams>]: TypeOf<NonNullable<QueryParams>[name]>
+    }
+  })
+  & (Files extends undefined ? {} : {
+    files: {
+      [name in keyof NonNullable<Files>]: File
+    }
+  });

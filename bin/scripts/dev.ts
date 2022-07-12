@@ -3,7 +3,7 @@ import createRouter from 'find-my-way';
 import type { Server as HttpServer } from "node:http";
 import type { Server as HttpsServer } from "node:https";
 import { Logger } from "../../src/logger";
-import { defaultConfig } from "../../src/default_config";
+import { defaultConfig } from "../../src/config/default.config";
 import { resolveHttpServer } from "../../src/utils/resolve_to_http_server";
 import { type IRouteObservable, type IRouteProvider, isRouteProvider, AuroraRouteAutoloader } from "../route_provider";
 import { type IServiceObservable, type IServiceProvider, isServiceProvider } from "../service_provider";
@@ -64,6 +64,7 @@ export class DevelopmentEnvironment {
 		// register configuration
 		container.register({
 			"aurora.logger.config": asValue(defaultConfig.logger),
+			"aurora.dev_script.config" : asValue(defaultConfig.app), 
 		});
 
 		const httpRouter = createRouter(defaultConfig.http.router);
