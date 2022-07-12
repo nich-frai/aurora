@@ -11,6 +11,9 @@ interface IInterceptResponse {
 export type TResponseInterceptionMoment =
   | 'data-validation-failed'
 
+  | 'raw-interceptor-prevented-progression-with-error-response' 
+  | 'raw-interceptor-prevented-progression-with-ok-response' 
+  
   | 'interceptor-prevented-progression'
   | 'interceptor-prevented-progression-with-ok-response'
   | 'interceptor-prevented-progression-with-error-response'

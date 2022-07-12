@@ -1,7 +1,7 @@
 import type { AwilixContainer } from "awilix";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AnyZodObject } from "zod";
-import { BadRequest, InternalServerError, Unauthorized } from "../error/http_error";
+import { BadRequest, HTTPError, InternalServerError, Unauthorized } from "../error/http_error";
 import { MissingServiceInContainer } from "../error/missing_service.error";
 import { Logger } from "../logger";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
@@ -120,6 +120,29 @@ export class Handler {
         ),
       );
       return response.send(res);
+    }
+
+    // apply raw interceptors
+    for (let interceptor of this.route.rawInterceptor ?? []) {
+      const fn = typeof interceptor === 'function' ? interceptor : interceptor.interceptor;
+      let intercepted = await fn(req, res, request as any);
+
+      if (intercepted instanceof Response || intercepted instanceof Error) {
+        
+        const isErrorResponse = intercepted instanceof Error || (intercepted instanceof Response && intercepted.status() >= 400);
+        const moment = isErrorResponse
+          ? 'raw-interceptor-prevented-progression-with-error-response'
+          : 'raw-interceptor-prevented-progression-with-ok-response';
+
+        const response = await this.applyResponseInterceptors(
+          intercepted,
+          moment,
+          container,
+          request
+        );
+
+        return response.send(res);
+      }
     }
 
     let interceptedRequest = await this.applyRequestInterceptors(request, container);
