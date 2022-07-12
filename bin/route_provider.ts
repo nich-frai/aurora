@@ -103,7 +103,7 @@ export class AuroraRouteAutoloader extends EventEmitter implements IRouteObserva
 	}
 
 	async provideRoutes(): Promise<Route[]> {
-		return this.autoloadHttpRoutes(path.join(process.cwd(), 'src','routes'));
+		return this.autoloadHttpRoutes(this.root);
 	}
 
 	onRouteChanged(listener: (route: Route) => void): this {
