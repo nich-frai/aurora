@@ -4,8 +4,8 @@ import type { AnyZodObject } from "zod";
 import { BadRequest, InternalServerError, Unauthorized } from "../error/http_error";
 import { MissingServiceInContainer } from "../error/missing_service.error";
 import { Logger } from "../logger";
-import type { HTTPRequestInterceptor } from "../middleware/request_interceptor";
-import type { HTTPResponseInterceptor, TInterceptHTTPResponseFn, TResponseInterceptionMoment } from "../middleware/response_interceptor";
+import type { TRequestInterceptor } from "../middleware/request_interceptor";
+import type { TResponseInterceptor, TInterceptResponseFn, TResponseInterceptionMoment } from "../middleware/response_interceptor";
 import { parseBodyIntoRequest } from "../parser/body";
 import { cookieParser } from "../parser/cookies";
 import { queryParamsParser } from "../parser/queryParams";
@@ -19,7 +19,7 @@ export class HTTPHandler {
 
   #logger: Logger;
 
-  #responseInterceptorsByMoment?: Record<TResponseInterceptionMoment, HTTPResponseInterceptor[]>;
+  #responseInterceptorsByMoment?: Record<TResponseInterceptionMoment, TResponseInterceptor[]>;
 
   // schemas, contributed by route handlers, guards and interceptor
   body?: TRequestBody;
@@ -32,7 +32,7 @@ export class HTTPHandler {
     return this.container;
   }
 
-  addResponseInterceptor(interceptor : HTTPResponseInterceptor) {
+  addResponseInterceptor(interceptor : TResponseInterceptor) {
     // destroy cached "moments"
     this.#responseInterceptorsByMoment = undefined;
 
@@ -43,9 +43,7 @@ export class HTTPHandler {
     this.route.responseInterceptor.push(interceptor);
   }
 
-  addRequestInterceptor(interceptor : HTTPRequestInterceptor) {
-    // destroy cached "moments"
-    
+  addRequestInterceptor(interceptor : TRequestInterceptor) {
     if(this.route.requestInterceptor == null) {
       this.route.requestInterceptor = [];
     } 
@@ -231,7 +229,7 @@ export class HTTPHandler {
 
     // 2: check if body schema is present
     if (this.body != null) {
-      await parseBodyIntoRequest(container, req, request, route,);
+      await parseBodyIntoRequest(container, req, request, route);
       // validate body
       let parsedBody = (this.body as TRequestBody).safeParse(request.body);
       if (!parsedBody.success) {
@@ -356,7 +354,7 @@ export class HTTPHandler {
         "interceptor-prevented-progression-with-error-response": [],
         "interceptor-prevented-progression-with-ok-response": [],
         always: [],
-      } as Record<TResponseInterceptionMoment, HTTPResponseInterceptor[]>;
+      } as Record<TResponseInterceptionMoment, TResponseInterceptor[]>;
 
       // sort by moments
       (this.route.responseInterceptor ?? []).forEach(intercept => {
@@ -393,7 +391,7 @@ export class HTTPHandler {
 
     const interceptors = this.responseInterceptorsSortedByMoments;
 
-    const applyInterceptors: TInterceptHTTPResponseFn[] = [];
+    const applyInterceptors: TInterceptResponseFn[] = [];
 
     // check which interceptors should be applied
     switch (moment) {

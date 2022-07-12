@@ -1,10 +1,11 @@
 import type { THttpConfiguration } from "../config/http.config";
 import type { HTTPMethod } from "find-my-way";
 import type { PartialDeep } from "type-fest";
-import type { HTTPResponseInterceptor } from "../middleware/response_interceptor";
-import type { HTTPRequestInterceptor } from "../middleware/request_interceptor";
+import type { TResponseInterceptor } from "../middleware/response_interceptor";
+import type { TRequestInterceptor } from "../middleware/request_interceptor";
 import type { TRequestType, TRequestBody, TRequestCookies, TRequestFiles, TRequestHeaders, TRequestQueryParams, TRequestURLParams } from "../request/request.class";
 import type { RouteGuard } from "middleware/guard";
+import type { TRawInterceptor } from "middleware/raw";
 
 /**
  * [HTTP] Route
@@ -104,6 +105,8 @@ export class Route<
   register? : Record<string, unknown>;
 
   // lifecycle interceptors
+  rawInterceptor? : TRawInterceptor[];
+
   /**
    * Request Interceptor
    * --------------------
@@ -113,7 +116,7 @@ export class Route<
    * 
    * Request interceptors are called AFTER incoming data validation and BEFORE route guards
    */
-  requestInterceptor?: HTTPRequestInterceptor<Body, Headers, Cookies, URLParams, QueryParams>[];
+  requestInterceptor?: TRequestInterceptor<Body, Headers, Cookies, URLParams, QueryParams>[];
 
   /**
    * Route Guard
@@ -135,7 +138,7 @@ export class Route<
    * Are triggered AFTER the route handler finished, short-circuiting the request-response
    * will NOT go through response interceptors;
    */
-  responseInterceptor?: HTTPResponseInterceptor[];
+  responseInterceptor?: TResponseInterceptor[];
 
   // actual route handler
   handler!: HTTPRequestHandler<Body, Headers, Cookies, URLParams, QueryParams, Files, Services>;
@@ -186,6 +189,7 @@ export function createRoute<
   route.queryParams = options.queryParams;
   route.urlParams = options.urlParams;
 
+  route.rawInterceptor = options.rawInterceptor ?? [];
   route.guards = options.guards ?? [];
   route.requestInterceptor = options.requestInterceptor as any[] ?? [];
   route.responseInterceptor = options.responseInterceptor ?? [];
@@ -221,14 +225,15 @@ export type ICreateRouteOptions<
     config?: PartialDeep<THttpConfiguration['route']>;
 
     // lifecycle interceptors
-    requestInterceptor?: HTTPRequestInterceptor<
+    rawInterceptor? : TRawInterceptor[];
+    requestInterceptor?: TRequestInterceptor<
       NonNullable<Body>,
       NonNullable<Headers>,
       NonNullable<Cookies>,
       NonNullable<URLParams>,
       NonNullable<QueryParams>
     >[];
-    responseInterceptor?: HTTPResponseInterceptor[];
+    responseInterceptor?: TResponseInterceptor[];
     guards?: RouteGuard[];
 
     // actual route handler

@@ -1,6 +1,7 @@
+import type { TRawInterceptor } from "middleware/raw";
 import type { RouteGuard } from "../middleware/guard";
-import type { HTTPRequestInterceptor } from "../middleware/request_interceptor";
-import type { HTTPResponseInterceptor } from "../middleware/response_interceptor";
+import type { TRequestInterceptor } from "../middleware/request_interceptor";
+import type { TResponseInterceptor } from "../middleware/response_interceptor";
 import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestURLParams } from "../request/request.class";
 import type { Route } from "../route/route.class";
 
@@ -15,8 +16,9 @@ export class Controller<
 
   register?: Record<string, unknown>;
 
-  interceptRequest?: (HTTPRequestInterceptor<Body, Headers, Cookies, URLParams, QueryParams>)[] = [];
-  interceptResponse?: HTTPResponseInterceptor[] = [];
+  rawInterceptor? : TRawInterceptor[] = [];
+  interceptRequest?: (TRequestInterceptor<Body, Headers, Cookies, URLParams, QueryParams>)[] = [];
+  interceptResponse?: TResponseInterceptor[] = [];
   guard?: RouteGuard<Body, Headers, Cookies, URLParams, QueryParams, Services>[] = [];
 
   // require schema
@@ -29,6 +31,7 @@ export class Controller<
   applyToRoute(...routes: Route<Body, Headers, Cookies, URLParams, QueryParams>[]) {
     routes.forEach(route => {
       // preppend interceptors and guards
+      route.rawInterceptor = [...this.rawInterceptor ?? [], ...route.rawInterceptor ?? []];
       route.requestInterceptor = [...this.interceptRequest ?? [], ...route.requestInterceptor ?? []];
       route.responseInterceptor = [...this.interceptResponse ?? [], ...route.responseInterceptor ?? []];
       route.guards = [...this.guard ?? [], ...route.guards ?? []] as any[];
@@ -128,8 +131,8 @@ export interface ICreateController<
   > {
   register?: Record<string, unknown>;
 
-  interceptRequest?: HTTPRequestInterceptor<Body, Headers, Cookies, URLParams, QueryParams>[];
-  interceptResponse?: HTTPResponseInterceptor[];
+  interceptRequest?: TRequestInterceptor<Body, Headers, Cookies, URLParams, QueryParams>[];
+  interceptResponse?: TResponseInterceptor[];
   guard?: RouteGuard<Body, Headers, Cookies, URLParams, QueryParams, Services>[];
 
   // require schema
