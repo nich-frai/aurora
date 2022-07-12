@@ -1,12 +1,11 @@
 import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
 import type { HTTPResponse } from "../response/response.class";
 
-export type HTTPResponseInterceptor = IInterceptHTTPResponse | TInterceptHTTPResponseFn;
+export type TResponseInterceptor = IInterceptResponse | TInterceptResponseFn;
 
-
-interface IInterceptHTTPResponse {
+interface IInterceptResponse {
   name: string;
-  interceptor: TInterceptHTTPResponseFn;
+  interceptor: TInterceptResponseFn;
   interceptWhen?: TResponseInterceptionMoment | TResponseInterceptionMoment[];
 }
 
@@ -27,7 +26,7 @@ export type TResponseInterceptionMoment =
   | 'always'
   ;
 
-export type TInterceptHTTPResponseFn<
+export type TInterceptResponseFn<
 Body extends TRequestBody | undefined = undefined,
 Headers extends TRequestHeaders | undefined = undefined,
 Cookies extends TRequestCookies | undefined = undefined,

@@ -3,15 +3,15 @@ import { randomUUID } from 'crypto';
 import type { File } from 'formidable';
 import type PersistentFile from 'formidable/PersistentFile';
 import type { Class, JsonValue, Merge } from 'type-fest';
-import type { AnyZodObject, TypeOf, ZodBoolean, ZodNumber, ZodString, ZodType, ZodTypeDef } from 'zod';
+import type { AnyZodObject, TypeOf, ZodBoolean, ZodNumber, ZodOptional, ZodString, ZodType, ZodTypeDef } from 'zod';
 import type { HTTPIncomingHeaders, Route } from '../route/route.class';
 import { toDependencyResolver } from '../utils/to_dependency_resolver';
 
 export type TRequestBody = AnyZodObject;
 export type TRequestHeaders = { [name in HTTPIncomingHeaders]?: ZodString };
-export type TRequestCookies = { [name : string] : ZodString };
-export type TRequestURLParams = { [name : string] : ZodString };
-export type TRequestQueryParams = { [name : string] : ZodString | ZodNumber | ZodBoolean };
+export type TRequestCookies = { [name : string] : ZodString | ZodOptional<ZodString> };
+export type TRequestURLParams = { [name : string] : ZodString | ZodOptional<ZodString> };
+export type TRequestQueryParams = { [name : string] : ZodString | ZodNumber | ZodBoolean | ZodOptional<ZodString | ZodNumber | ZodBoolean> };
 export type TRequestFiles = Record<string, ZodType<PersistentFile, ZodTypeDef, PersistentFile>>;
 
 export class Request<
@@ -61,7 +61,6 @@ export class Request<
 		this.id = randomUUID();
 		this.issuedAt = new Date();
 		this.method = method.toLocaleUpperCase();
-
 	}
 
   provide(
@@ -73,12 +72,10 @@ export class Request<
 
 }
 
-
 export interface IHTTPRequestContext {
   route: Route;
   container: AwilixContainer;
 }
-
 
 export type TRequestType<
   Body extends TRequestBody | undefined = undefined,
@@ -101,9 +98,10 @@ export type TRequestType<
     }
   })
   & (URLParams extends undefined ? {} : {
-    urlParams: {
-      [name in keyof NonNullable<URLParams>]: string
-    }
+    urlParams: Merge<
+    { [name in keyof NonNullable<URLParams>]: string },
+    { [name in string]: string | undefined }
+    >
   })
   & (QueryParams extends undefined ? {} : {
     queryParams: {

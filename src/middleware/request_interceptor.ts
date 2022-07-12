@@ -2,16 +2,16 @@ import type { Class, JsonValue } from "type-fest";
 import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
 import type { HTTPResponse } from "../response/response.class";
 
-export type HTTPRequestInterceptor<
+export type TRequestInterceptor<
   Body extends TRequestBody | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
-  > = IInterceptHTTPRequest<Body, Headers, Cookies, URLParams, QueryParams> | TInterceptHTTPRequestFn<Body, Headers, Cookies, URLParams, QueryParams>;
+  > = IInterceptRequest<Body, Headers, Cookies, URLParams, QueryParams> | TInterceptRequestFn<Body, Headers, Cookies, URLParams, QueryParams>;
 
 
-interface IInterceptHTTPRequest<
+interface IInterceptRequest<
   Body extends TRequestBody | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
@@ -27,14 +27,14 @@ interface IInterceptHTTPRequest<
   urlParams?: URLParams;
   queryParams?: QueryParams;
 
-  interceptor: TInterceptHTTPRequestFn<Body, Headers, Cookies, URLParams, QueryParams, Services>;
+  interceptor: TInterceptRequestFn<Body, Headers, Cookies, URLParams, QueryParams, Services>;
 
   provide? : {
     [name : string] : Class<unknown> | ((...args : any) => any) | JsonValue;
   };
 }
 
-export type TInterceptHTTPRequestFn<
+export type TInterceptRequestFn<
   Body extends TRequestBody | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
@@ -52,8 +52,8 @@ export function createRequestInterceptor<
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
-  >(options: IInterceptHTTPRequest<Body, Headers, Cookies, URLParams, QueryParams, Services>) {
-  const g: IInterceptHTTPRequest<Body, Headers, Cookies, URLParams, QueryParams, Services> = {
+  >(options: IInterceptRequest<Body, Headers, Cookies, URLParams, QueryParams, Services>) {
+  const g: IInterceptRequest<Body, Headers, Cookies, URLParams, QueryParams, Services> = {
     ...options
   };
   return g;
