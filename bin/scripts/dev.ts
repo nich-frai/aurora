@@ -7,7 +7,7 @@ import { defaultConfig } from "../../src/config/default.config";
 import { resolveHttpServer } from "../../src/utils/resolve_to_http_server";
 import { type IRouteObservable, type IRouteProvider, isRouteProvider, AuroraRouteAutoloader } from "../route_provider";
 import { type IServiceObservable, type IServiceProvider, isServiceProvider } from "../service_provider";
-import { HTTPHandler } from "../../src/handler/handler.class";
+import { Handler } from "../../src/handler/handler.class";
 
 export class DevelopmentEnvironment {
 
@@ -95,7 +95,7 @@ export class DevelopmentEnvironment {
 			const routes = await this.routeProvider.provideRoutes();
 			console.log(routes.map(r => `${r.method}::/${r.url}`))
 			for (let route of routes) {
-				const handler = new HTTPHandler(
+				const handler = new Handler(
 					container,
 					route
 				);

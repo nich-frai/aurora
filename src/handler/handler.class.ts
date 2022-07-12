@@ -13,12 +13,11 @@ import { Request, TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryP
 import { Response } from "../response/response.class";
 import type { Route } from "../route/route.class";
 
-export class HTTPHandler {
+export class Handler {
 
   #cachedFunctionParameters = new Map<Function, string[]>();
 
   #logger: Logger;
-
 
   // schemas, contributed by route handlers, guards and interceptor
   body?: TRequestBody;
@@ -54,7 +53,7 @@ export class HTTPHandler {
   ) {
     this.#logger = new Logger(
       container,
-      `${HTTPHandler.name}::${route.method?.toLocaleUpperCase() ?? 'GET'}"${route.url ?? '/'}"`
+      `${Handler.name}::${route.method?.toLocaleUpperCase() ?? 'GET'}"${route.url ?? '/'}"`
     );
 
     // 1. Schemas contributions from interceptors
@@ -203,9 +202,7 @@ export class HTTPHandler {
       container,
       request,
     );
-
     return response.send(res);
-
   }
 
   private async forgeRequest(req: IncomingMessage, urlParams: Record<string, string | undefined>, container: AwilixContainer) {
@@ -235,7 +232,7 @@ export class HTTPHandler {
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
           if (value == null) {
-            return new BadRequest(`This route expects a header named "${headerKey}" to be present!`);
+            return new BadRequest(`This route requires a header named "${headerKey}" to be present!`);
           }
           return new BadRequest(`A header parameter could not be validated! ${parsed.error.toString()}`);
         }
