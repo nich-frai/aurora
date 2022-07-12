@@ -2,7 +2,9 @@
   "name": "aurora",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/aurora.lib.ts",
+  "types": "src/aurora.lib.ts",
+  "bin" : "./bin/aurora_dev.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

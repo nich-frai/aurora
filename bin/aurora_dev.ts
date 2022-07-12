@@ -1,3 +1,4 @@
+#!/usr/bin/env node --loader tsx
 import { DevelopmentEnvironment } from './scripts/dev';
 import { print, println } from './utils/print';
 import kleur from 'kleur';
@@ -15,10 +16,10 @@ const container = createContainer();
 
 const env = new DevelopmentEnvironment({
   container,
-  routeAutoloader: new AuroraRouteAutoloader(
+  routeProvider: new AuroraRouteAutoloader(
     path.join(process.cwd(), 'src', 'routes')
   ),
-  serviceAutoloader: new AuroraServiceProvider(
+  serviceProvider: new AuroraServiceProvider(
     container,
     path.join(process.cwd(), 'src', 'services')
   )

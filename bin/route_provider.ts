@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
 import { default as path } from 'node:path';
 import { pathToFileURL } from "node:url";
-import { defaultModuleLoader } from "utils/module_loader";
+import { defaultModuleLoader } from "../src/utils/module_loader";
 import { z } from "zod";
 import { Controller } from "../src/controller/controller.class";
 import { Route } from "../src/route/route.class";
@@ -103,7 +103,7 @@ export class AuroraRouteAutoloader extends EventEmitter implements IRouteObserva
 	}
 
 	async provideRoutes(): Promise<Route[]> {
-		return this.autoloadHttpRoutes(this.root);
+		return this.autoloadHttpRoutes(this.root, this.root);
 	}
 
 	onRouteChanged(listener: (route: Route) => void): this {
@@ -223,7 +223,7 @@ export async function defaultRouteModuleLoader(
   filepath: string
 ) {
   const fileURL = pathToFileURL(filepath);
-	let hasRegExp = matchesWithFileMatcher(matcher, filepath);
+	let hasRegExp = matchesWithFileMatcher(matcher, path.basename(filepath));
 	let name : string;
 	let method : string;
 

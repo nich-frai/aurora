@@ -26,6 +26,10 @@ const HttpRouterConfig : Router.Config<HTTPVersion.V1> = {
 	caseSensitive : true,
 	ignoreDuplicateSlashes : true,
 	ignoreTrailingSlash : true,
+	defaultRoute(req, res) {
+		res.statusCode = 404;
+		res.end('The requested resource ([' + req.method + '] ' + req.url + ') does not exist in this server!');
+	}
 };
 
 const LoggerTransports : TransportMultiOptions['targets'] = [
