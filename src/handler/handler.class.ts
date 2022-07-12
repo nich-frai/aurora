@@ -5,12 +5,12 @@ import { BadRequest, InternalServerError, Unauthorized } from "../error/http_err
 import { MissingServiceInContainer } from "../error/missing_service.error";
 import { Logger } from "../logger";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
-import type { TResponseInterceptor, TInterceptResponseFn, TResponseInterceptionMoment } from "../middleware/response_interceptor";
+import type { TResponseInterceptionMoment, TResponseInterceptor } from "../middleware/response_interceptor";
 import { parseBodyIntoRequest } from "../parser/body";
 import { cookieParser } from "../parser/cookies";
 import { queryParamsParser } from "../parser/queryParams";
 import { Request, TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestURLParams } from "../request/request.class";
-import { HTTPResponse } from "../response/response.class";
+import { Response } from "../response/response.class";
 import type { Route } from "../route/route.class";
 
 export class HTTPHandler {
@@ -19,7 +19,6 @@ export class HTTPHandler {
 
   #logger: Logger;
 
-  #responseInterceptorsByMoment?: Record<TResponseInterceptionMoment, TResponseInterceptor[]>;
 
   // schemas, contributed by route handlers, guards and interceptor
   body?: TRequestBody;
@@ -32,21 +31,19 @@ export class HTTPHandler {
     return this.container;
   }
 
-  addResponseInterceptor(interceptor : TResponseInterceptor) {
-    // destroy cached "moments"
-    this.#responseInterceptorsByMoment = undefined;
+  addResponseInterceptor(interceptor: TResponseInterceptor) {
 
-    if(this.route.responseInterceptor == null) {
+    if (this.route.responseInterceptor == null) {
       this.route.responseInterceptor = [];
-    } 
+    }
 
     this.route.responseInterceptor.push(interceptor);
   }
 
-  addRequestInterceptor(interceptor : TRequestInterceptor) {
-    if(this.route.requestInterceptor == null) {
+  addRequestInterceptor(interceptor: TRequestInterceptor) {
+    if (this.route.requestInterceptor == null) {
       this.route.requestInterceptor = [];
-    } 
+    }
 
     this.route.requestInterceptor.push(interceptor);
   }
@@ -56,9 +53,9 @@ export class HTTPHandler {
     private route: Route
   ) {
     this.#logger = new Logger(
-			container, 
-			`${HTTPHandler.name}::${route.method?.toLocaleUpperCase() ?? 'GET'}"${route.url ?? '/'}"`
-			);
+      container,
+      `${HTTPHandler.name}::${route.method?.toLocaleUpperCase() ?? 'GET'}"${route.url ?? '/'}"`
+    );
 
     // 1. Schemas contributions from interceptors
     for (let contributor of this.route.requestInterceptor ?? []) {
@@ -114,14 +111,14 @@ export class HTTPHandler {
     let request = await this.forgeRequest(req, urlParams, container);
 
     // If it returned a http response or an error a validation error ocurred!
-    if (request instanceof HTTPResponse || request instanceof Error) {
+    if (request instanceof Response || request instanceof Error) {
       let response = await this.applyResponseInterceptors(
         request,
         'data-validation-failed',
         container,
         new Request(
-					container, req.url!, req.method!
-				),
+          container, req.url!, req.method!
+        ),
       );
       return response.send(res);
     }
@@ -129,23 +126,17 @@ export class HTTPHandler {
     let interceptedRequest = await this.applyRequestInterceptors(request, container);
 
     // again, interceptors can short circuit the request cycle
-    if (interceptedRequest instanceof HTTPResponse || interceptedRequest instanceof Error) {
-      let response: HTTPResponse;
-      if (!(interceptedRequest instanceof Error) && interceptedRequest.status() < 400) {
-        response = await this.applyResponseInterceptors(
-          interceptedRequest,
-          'interceptor-prevented-progression-with-ok-response',
-          container,
-          request,
-        );
-      } else {
-        response = await this.applyResponseInterceptors(
-          interceptedRequest,
-          'interceptor-prevented-progression-with-error-response',
-          container,
-          request,
-        );
-      }
+    if (interceptedRequest instanceof Response || interceptedRequest instanceof Error) {
+      const isReturnValueOfInterceptorAnError = !(interceptedRequest instanceof Error) && interceptedRequest.status() < 400;
+      const moment: TResponseInterceptionMoment = isReturnValueOfInterceptorAnError
+        ? 'interceptor-prevented-progression-with-error-response'
+        : 'interceptor-prevented-progression-with-ok-response';
+      const response = await this.applyResponseInterceptors(
+        interceptedRequest,
+        moment,
+        container,
+        request,
+      );
       return response.send(res);
     }
 
@@ -153,10 +144,11 @@ export class HTTPHandler {
     request = interceptedRequest;
 
     // apply guards
-    let canContinue = await this.applyGuards(request, container);
-    if (canContinue instanceof Error || canContinue instanceof HTTPResponse) {
+    const canContinue = await this.applyGuards(request, container);
+    const didGuardPreventedAccess = canContinue !== true;
+    if (didGuardPreventedAccess) {
       let response = await this.applyResponseInterceptors(
-        canContinue,
+        canContinue as Response | Error,
         'guard-prevented-progression',
         container,
         request,
@@ -169,14 +161,13 @@ export class HTTPHandler {
     let handlerServices: unknown[] | Error;
     handlerServices = this.resolveServices(container, this.getFunctionServices(this.route.handler, 1));
     if (handlerServices instanceof Error) {
-
       this.#logger.fatal(
         'Failed to resolve services from route handler ',
         { url: this.route.url, method: this.route.method },
         "List of route hanlder dependencies:",
         this.getFunctionServices(this.route.handler, 1)
       );
-      return HTTPResponse.error(
+      return Response.error(
         new InternalServerError("Missing/unresolved required service for this route")
       ).send(res);
     }
@@ -184,7 +175,7 @@ export class HTTPHandler {
       handlerResponse = await this.route.handler(request, ...handlerServices);
     } catch (err) {
       if (err instanceof Error) {
-        handlerResponse = HTTPResponse.error(err)
+        handlerResponse = Response.error(err)
       } else {
         // TODO: throw something inside a function, should I create a new error?
         this.#logger.dev('Handler threw a non error value!', err);
@@ -193,30 +184,28 @@ export class HTTPHandler {
 
     // transform handlerResponse into a payload if it's not already an Error or a HTTPResponse
     if (
-      !(handlerResponse instanceof HTTPResponse)
+      !(handlerResponse instanceof Response)
       && !(handlerResponse instanceof Error)
     ) {
-      handlerResponse = HTTPResponse.ok(handlerResponse);
+      handlerResponse = Response.ok(handlerResponse);
     }
 
-    if (handlerResponse instanceof Error || (handlerResponse instanceof HTTPResponse && handlerResponse.status() >= 400)) {
-      let response = await this.applyResponseInterceptors(
-        handlerResponse,
-        'handler-finished-with-error-response',
-        container,
-        request,
-      );
-      return response.send(res);
-    }
+    const handlerRespondedWithAnError = handlerResponse instanceof Error
+      || (handlerResponse instanceof Response && handlerResponse.status() >= 400);
 
-    handlerResponse = await this.applyResponseInterceptors(
+    const moment = handlerRespondedWithAnError
+      ? 'handler-finished-with-error-response'
+      : 'handler-finished-with-ok-response';
+
+    const response = await this.applyResponseInterceptors(
       handlerResponse,
-      'handler-finished-with-ok-response',
+      moment,
       container,
       request,
     );
 
-    return handlerResponse.send(res);
+    return response.send(res);
+
   }
 
   private async forgeRequest(req: IncomingMessage, urlParams: Record<string, string | undefined>, container: AwilixContainer) {
@@ -224,8 +213,8 @@ export class HTTPHandler {
 
     // 1: define id, method and url
     const request: Request = new Request(container, req.url!, req.method!);
-		request.headers = Object.entries(req.headers)
-		.reduce((o, [k, v]) => { o[k] = String(v); return o; }, {} as Record<string, string>);
+    request.headers = Object.entries(req.headers)
+      .reduce((o, [k, v]) => { o[k] = String(v); return o; }, {} as Record<string, string>);
 
     // 2: check if body schema is present
     if (this.body != null) {
@@ -274,7 +263,7 @@ export class HTTPHandler {
 
     // 5: check for url params
     if (this.urlParams != null) {
-      request.urlParams = {} as any;
+      request.urlParams = urlParams ?? {} as any;
       for (let urlKey in (this.urlParams as TRequestURLParams)) {
         let parser = (this.urlParams as TRequestURLParams)[urlKey];
         let value = urlParams[urlKey];
@@ -311,7 +300,7 @@ export class HTTPHandler {
 
   }
 
-  private async applyRequestInterceptors(request: Request, container: AwilixContainer): Promise<Request | Error | HTTPResponse> {
+  private async applyRequestInterceptors(request: Request, container: AwilixContainer): Promise<Request | Error | Response> {
     const route = this.route;
 
     for (let interceptor of route.requestInterceptor ?? []) {
@@ -323,11 +312,11 @@ export class HTTPHandler {
           { url: this.route.url, method: this.route.method },
           this.getParamNames(interceptorFn)
         );
-        return HTTPResponse.error(new InternalServerError("Missing/unresolved required service for this route"));
+        return Response.error(new InternalServerError("Missing/unresolved required service for this route"));
       }
       let newRequest = await interceptorFn(request, ...injectServices);
       // check return from interceptor
-      if (newRequest instanceof Error || newRequest instanceof HTTPResponse) {
+      if (newRequest instanceof Error || newRequest instanceof Response) {
         return newRequest;
       }
       request = newRequest as any;
@@ -336,108 +325,24 @@ export class HTTPHandler {
     return request;
   }
 
-  /**
-   * Get the response interceptors sorted by their "moments"
-   * 
-   */
-  get responseInterceptorsSortedByMoments() {
-
-    if (this.#responseInterceptorsByMoment == null) {
-      this.#responseInterceptorsByMoment = {
-        "before-writing-to-client": [],
-        "data-validation-failed": [],
-        "guard-prevented-progression": [],
-        "handler-finished": [],
-        "handler-finished-with-error-response": [],
-        "handler-finished-with-ok-response": [],
-        "interceptor-prevented-progression": [],
-        "interceptor-prevented-progression-with-error-response": [],
-        "interceptor-prevented-progression-with-ok-response": [],
-        always: [],
-      } as Record<TResponseInterceptionMoment, TResponseInterceptor[]>;
-
-      // sort by moments
-      (this.route.responseInterceptor ?? []).forEach(intercept => {
-        if (typeof intercept === 'function') {
-          this.#responseInterceptorsByMoment![DEFAULT_INTERCEPTION_MOMENT].push(intercept);
-        } else {
-          if (Array.isArray(intercept.interceptWhen)) {
-            for (let when of intercept.interceptWhen) {
-              this.#responseInterceptorsByMoment![when].push(intercept);
-            }
-          } else {
-            this.#responseInterceptorsByMoment![intercept.interceptWhen ?? DEFAULT_INTERCEPTION_MOMENT].push(intercept);
-          }
-        }
-      });
-    }
-
-    return this.#responseInterceptorsByMoment!;
-  }
-
   private async applyResponseInterceptors(
-    responseOrError: HTTPResponse | Error,
+    responseOrError: Response | Error,
     moment: TResponseInterceptionMoment,
     container: AwilixContainer,
     request: Request
   ) {
 
-    let response: HTTPResponse;
+    let response: Response;
     if (responseOrError instanceof Error) {
-      response = HTTPResponse.error(responseOrError);
+      response = Response.error(responseOrError);
     } else {
       response = responseOrError;
     }
 
-    const interceptors = this.responseInterceptorsSortedByMoments;
+    const interceptors = this.route.responseInterceptor ?? [];
 
-    const applyInterceptors: TInterceptResponseFn[] = [];
-
-    // check which interceptors should be applied
-    switch (moment) {
-      case 'data-validation-failed':
-        applyInterceptors.push(
-          ...interceptors['data-validation-failed'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor)
-        );
-        break;
-      case 'guard-prevented-progression':
-        applyInterceptors.push(
-          ...interceptors['guard-prevented-progression'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor)
-        );
-        break;
-      case 'handler-finished-with-error-response':
-        applyInterceptors.push(
-          ...interceptors['handler-finished-with-error-response'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-          ...interceptors['handler-finished'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-        );
-        break;
-      case 'handler-finished-with-ok-response':
-        applyInterceptors.push(
-          ...interceptors['handler-finished-with-ok-response'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-          ...interceptors['handler-finished'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-        );
-        break;
-      case 'interceptor-prevented-progression-with-error-response':
-        applyInterceptors.push(
-          ...interceptors['interceptor-prevented-progression-with-error-response'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-          ...interceptors['interceptor-prevented-progression'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-        );
-        break;
-      case 'interceptor-prevented-progression-with-ok-response':
-        applyInterceptors.push(
-          ...interceptors['interceptor-prevented-progression-with-ok-response'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-          ...interceptors['interceptor-prevented-progression'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-        );
-        break;
-    }
-
-    // Always append both moments
-    applyInterceptors.push(
-      ...interceptors['before-writing-to-client'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-      ...interceptors['always'].map(interceptor => typeof interceptor === 'function' ? interceptor : interceptor.interceptor),
-    );
-
-    for (const interceptorFn of applyInterceptors) {
+    for (const interceptor of interceptors) {
+      const interceptorFn = typeof interceptor === 'function' ? interceptor : interceptor.interceptor;
       let injectServices = this.resolveServices(container, this.getFunctionServices(interceptorFn, 2));
       if (injectServices instanceof Error) {
         this.#logger.fatal(
@@ -445,10 +350,10 @@ export class HTTPHandler {
           { url: this.route.url, method: this.route.method },
           this.getParamNames(interceptorFn)
         );
-        return HTTPResponse.error(new InternalServerError("Missing/unresolved required service for this route"));
+        return Response.error(new InternalServerError("Missing/unresolved required service for this route"));
       }
       let interceptedResponse = await interceptorFn(response, request, ...injectServices);
-      if(!(interceptedResponse instanceof HTTPResponse)) {
+      if (!(interceptedResponse instanceof Response)) {
         this.#logger.warn("Response interceptor failed to return a HTTP response! Using previous reference for it!");
       } else {
         response = interceptedResponse;
@@ -476,7 +381,7 @@ export class HTTPHandler {
         return new InternalServerError("Missing/unresolved required service for this route");
       }
       const canContinue = await guardFn(request, ...guardServices);
-      if (!canContinue || canContinue instanceof HTTPResponse) {
+      if (!canContinue || canContinue instanceof Response) {
         if (typeof canContinue == 'boolean') {
           return new Unauthorized("You may not access this endpoint!");
         }

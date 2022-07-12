@@ -1,5 +1,5 @@
 import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
-import type { HTTPResponse } from "../response/response.class";
+import type { Response } from "../response/response.class";
 
 export type RouteGuard<
   Body extends TRequestBody | undefined = undefined,
@@ -40,8 +40,8 @@ export type TRouteGuardFn<
     req: TRequestType<Body, Headers, Cookies, URLParams, QueryParams>,
     ...services: Services
   ) =>
-    | boolean | HTTPResponse
-    | Promise<boolean | HTTPResponse>;
+    | boolean | Response
+    | Promise<boolean | Response>;
 
 export function createGuard<
   Body extends TRequestBody | undefined = undefined,

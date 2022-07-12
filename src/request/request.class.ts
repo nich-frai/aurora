@@ -9,9 +9,9 @@ import { toDependencyResolver } from '../utils/to_dependency_resolver';
 
 export type TRequestBody = AnyZodObject;
 export type TRequestHeaders = { [name in HTTPIncomingHeaders]?: ZodString };
-export type TRequestCookies = { [name : string] : ZodString | ZodOptional<ZodString> };
-export type TRequestURLParams = { [name : string] : ZodString | ZodOptional<ZodString> };
-export type TRequestQueryParams = { [name : string] : ZodString | ZodNumber | ZodBoolean | ZodOptional<ZodString | ZodNumber | ZodBoolean> };
+export type TRequestCookies = { [name: string]: ZodString | ZodOptional<ZodString> };
+export type TRequestURLParams = { [name: string]: ZodString | ZodOptional<ZodString> };
+export type TRequestQueryParams = { [name: string]: ZodString | ZodNumber | ZodBoolean | ZodOptional<ZodString | ZodNumber | ZodBoolean> };
 export type TRequestFiles = Record<string, ZodType<PersistentFile, ZodTypeDef, PersistentFile>>;
 
 export class Request<
@@ -36,9 +36,9 @@ export class Request<
 
   body!: Body extends null | undefined ? undefined : TypeOf<NonNullable<Body>>;
 
-  urlParams?: URLParams extends null | undefined ? never : {
-    [name in keyof NonNullable<URLParams>]: string
-  };
+  urlParams?: URLParams extends null | undefined
+    ? { [name: string]: string | undefined }
+    : { [name in keyof NonNullable<URLParams>]: string };
 
   queryParams?: QueryParams extends null | undefined ? never : {
     [name in keyof NonNullable<QueryParams>]: TypeOf<NonNullable<QueryParams>[name]>
@@ -52,23 +52,23 @@ export class Request<
     [name in keyof NonNullable<Files>]: File
   };
 
-	constructor(
-		private container : AwilixContainer,
-		public url : string,
-		public method : string
-	){
-		this._metadata = {};
-		this.id = randomUUID();
-		this.issuedAt = new Date();
-		this.method = method.toLocaleUpperCase();
-	}
+  constructor(
+    private container: AwilixContainer,
+    public url: string,
+    public method: string
+  ) {
+    this._metadata = {};
+    this.id = randomUUID();
+    this.issuedAt = new Date();
+    this.method = method.toLocaleUpperCase();
+  }
 
   provide(
     name: string,
     value: (Class<any> | ((...args: any) => any)) | JsonValue
   ): void {
-		this.container.register(name, toDependencyResolver(value, Lifetime.SCOPED));
-	}
+    this.container.register(name, toDependencyResolver(value, Lifetime.SCOPED));
+  }
 
 }
 
@@ -99,8 +99,8 @@ export type TRequestType<
   })
   & (URLParams extends undefined ? {} : {
     urlParams: Merge<
-    { [name in keyof NonNullable<URLParams>]: string },
-    { [name in string]: string | undefined }
+      { [name in keyof NonNullable<URLParams>]: string },
+      { [name in string]: string | undefined }
     >
   })
   & (QueryParams extends undefined ? {} : {

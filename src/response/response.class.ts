@@ -3,10 +3,10 @@ import { HTTPError, InternalServerError } from "../error/http_error";
 import type { TResponseInterceptionMoment } from "../middleware/response_interceptor";
 import { ISetCookieOptions, serializeCookie } from "../parser/cookies";
 
-export class HTTPResponse {
+export class Response {
 
   static ok(send: unknown, status: HTTPStatus | number = HTTPStatus.Ok) {
-    const r = new HTTPResponse;
+    const r = new Response;
 
     r.status(status);
     r.setPayload(send);
@@ -15,7 +15,7 @@ export class HTTPResponse {
   }
 
   static error(err: Error | HTTPError, status?: HTTPStatus | number) {
-    const r = new HTTPResponse;
+    const r = new Response;
 
     if (err instanceof HTTPError) {
       r.status(err.status);

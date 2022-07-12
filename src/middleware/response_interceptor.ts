@@ -1,12 +1,11 @@
 import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
-import type { HTTPResponse } from "../response/response.class";
+import type { Response } from "../response/response.class";
 
 export type TResponseInterceptor = IInterceptResponse | TInterceptResponseFn;
 
 interface IInterceptResponse {
   name: string;
   interceptor: TInterceptResponseFn;
-  interceptWhen?: TResponseInterceptionMoment | TResponseInterceptionMoment[];
 }
 
 export type TResponseInterceptionMoment =
@@ -33,6 +32,6 @@ Cookies extends TRequestCookies | undefined = undefined,
 URLParams extends TRequestURLParams | undefined = undefined,
 QueryParams extends TRequestQueryParams | undefined = undefined,
 Services extends unknown[] = unknown[],
-> = (res: HTTPResponse, req : TRequestType<Body, Headers, Cookies, URLParams, QueryParams>, ...services: Services) =>
-  | HTTPResponse
-  | Promise<HTTPResponse>;
+> = (res: Response, req : TRequestType<Body, Headers, Cookies, URLParams, QueryParams>, ...services: Services) =>
+  | Response
+  | Promise<Response>;

@@ -1,6 +1,6 @@
 import type { Class, JsonValue } from "type-fest";
 import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
-import type { HTTPResponse } from "../response/response.class";
+import type { Response } from "../response/response.class";
 
 export type TRequestInterceptor<
   Body extends TRequestBody | undefined = undefined,
@@ -42,8 +42,8 @@ export type TInterceptRequestFn<
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   > = (req: TRequestType<Body, Headers, Cookies, URLParams, QueryParams>, ...services: Services) =>
-    | TRequestType<Body, Headers, Cookies, URLParams, QueryParams> | HTTPResponse | Error
-    | Promise<TRequestType<Body, Headers, Cookies, URLParams, QueryParams> | HTTPResponse | Error>;
+    | TRequestType<Body, Headers, Cookies, URLParams, QueryParams> | Response | Error
+    | Promise<TRequestType<Body, Headers, Cookies, URLParams, QueryParams> | Response | Error>;
 
 export function createRequestInterceptor<
   Body extends TRequestBody | undefined = undefined,

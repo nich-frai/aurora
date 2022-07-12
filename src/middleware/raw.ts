@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Request } from "../request/request.class";
-import type { HTTPResponse } from "../response/response.class";
+import type { Response } from "../response/response.class";
 import type { Class, JsonValue } from "type-fest";
 import type { AnyZodObject } from "zod";
 
@@ -23,8 +23,8 @@ export type TRawInterceptorFn = (
 ) =>
 	| void
 	| Error
-	| HTTPResponse
-	| Promise<void | HTTPResponse | Error>;
+	| Response
+	| Promise<void | Response | Error>;
 
 export function createRawInterceptor(options: IInterceptRaw) {
 	return options;
