@@ -1,10 +1,13 @@
-import type { ZodOptional, ZodString } from "zod";
+import type { TRawInterceptor } from "aurora.lib";
+import type { Request } from "http.lib";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import type { AnyZodObject, ZodOptional, ZodString } from "zod";
 import { BadRequest } from "../error/http_error";
 
 export type TCookiesSchema = { [name: string]: ZodString | ZodOptional<ZodString> };
 
-export function cookieParser(cookieStr : string) : Record<string, string> {
-  if(cookieStr.length === 0){
+export function cookieParser(cookieStr: string): Record<string, string> {
+  if (cookieStr.length === 0) {
     return {};
   }
 
@@ -14,29 +17,42 @@ export function cookieParser(cookieStr : string) : Record<string, string> {
 
   pieces.forEach(cookie => {
     let ioEqual = cookie.indexOf('=');
-    if(ioEqual < 0) {
+    if (ioEqual < 0) {
       throw new BadRequest('Cookie header is incorrectly formatted!');
     }
     let key = cookie.substring(0, ioEqual);
-    let value = cookie.substring(ioEqual +1);
+    let value = cookie.substring(ioEqual + 1);
     response[key] = value;
   });
 
   return response;
 }
 
+export function createCookieParser(schema: TCookiesSchema): TRawInterceptor {
+  return {
+    name: 'aurora.cookie.parser',
+    interceptor(req: IncomingMessage, res: ServerResponse, request: Request<AnyZodObject>) {
+      const parsedCookies = cookieParser(req.headers['cookie'] ?? '');
+      // validate cookie schema
+      for (let cookieName in schema) {
+
+      }
+    }
+  };
+}
+
 var fieldContentRegExp = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/;
 
 export interface ISetCookieOptions {
-  value : string;
-  httpOnly? : boolean;
+  value: string;
+  httpOnly?: boolean;
   maxAge?: number;
-  domain? : string;
-  path? : string;
-  expires? : Date;
-  secure? : boolean;
-  priority? : 'low' | 'medium' | 'high';
-  sameSite? : true | 'lax' | 'strict' | 'none';
+  domain?: string;
+  path?: string;
+  expires?: Date;
+  secure?: boolean;
+  priority?: 'low' | 'medium' | 'high';
+  sameSite?: true | 'lax' | 'strict' | 'none';
 }
 
 /**
@@ -55,7 +71,7 @@ export interface ISetCookieOptions {
  * @public
  */
 
-export function serializeCookie(name : string, val : string, options : Omit<ISetCookieOptions, "value">) {
+export function serializeCookie(name: string, val: string, options: Omit<ISetCookieOptions, "value">) {
   var opt = options || {};
   var enc = encode;
 
@@ -171,7 +187,7 @@ export function serializeCookie(name : string, val : string, options : Omit<ISet
  * @returns {string}
  */
 
-function encode (val : string) {
+function encode(val: string) {
   return encodeURIComponent(val)
 }
 
@@ -182,7 +198,7 @@ function encode (val : string) {
  * @private
  */
 
-function isDate (val : unknown) : val is Date {
+function isDate(val: unknown): val is Date {
   return String(val) === '[object Date]' ||
     val instanceof Date
 }

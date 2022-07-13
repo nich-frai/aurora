@@ -10,7 +10,7 @@ import { Logger } from "../logger";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
 import type { TResponseInterceptionMoment, TResponseInterceptor } from "../middleware/response_interceptor";
 import { createBodyParser } from "../parser/body";
-import { cookieParser, type TCookiesSchema } from "../parser/cookies";
+import { cookieParser, createCookieParser, type TCookiesSchema } from "../parser/cookies";
 import { queryParamsParser, TQueryParamsSchema } from "../parser/queryParams";
 import { Request, THeadersSchema, TUrlParamsSchema } from "../request/request.class";
 import { Response } from "../response/response.class";
@@ -443,12 +443,27 @@ export class Handler {
 
     // generate based on schema
 
-    // 1. the body parser
+    // 1. the body parser (includes file parsing!)
     if(this.body != null) {
-      let bodyParser = createBodyParser(
+      const bodyParser = createBodyParser(
         { body : this.body, files : this.files, },
         this.acceptsContentType
       );
+      this.rawInterceptors = [
+        bodyParser,
+        ...this.rawInterceptors
+      ];
+    }
+
+    // 2. the cookie parser
+    if(this.cookies != null) {
+      const cookieParser = createCookieParser(
+        this.cookies
+      );
+      this.rawInterceptors = [
+        cookieParser,
+        ...this.rawInterceptors
+      ];
     }
   }
 }
