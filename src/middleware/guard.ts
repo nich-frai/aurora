@@ -1,20 +1,20 @@
-import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
+import type { TRequestBody, TRequestCookies, THeadersSchema, TRequestQueryParams, TRequestType, TUrlParamsSchema } from "../request/request.class";
 import type { Response } from "../response/response.class";
 
 export type RouteGuard<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   > = IRouteGuard<Body, Headers, Cookies, URLParams, QueryParams, Services> | TRouteGuardFn<Body, Headers, Cookies, URLParams, QueryParams, Services>;
 
 export interface IRouteGuard<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   > {
@@ -31,9 +31,9 @@ export interface IRouteGuard<
 
 export type TRouteGuardFn<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   > = (
@@ -45,9 +45,9 @@ export type TRouteGuardFn<
 
 export function createGuard<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   >(options: IRouteGuard<Body, Headers, Cookies, URLParams, QueryParams, Services>) {

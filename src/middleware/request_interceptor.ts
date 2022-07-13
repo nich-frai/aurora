@@ -1,21 +1,21 @@
 import type { Class, JsonValue } from "type-fest";
-import type { TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
+import type { TRequestBody, TRequestCookies, THeadersSchema, TRequestQueryParams, TRequestType, TUrlParamsSchema } from "../request/request.class";
 import type { Response } from "../response/response.class";
 
 export type TRequestInterceptor<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   > = IInterceptRequest<Body, Headers, Cookies, URLParams, QueryParams> | TInterceptRequestFn<Body, Headers, Cookies, URLParams, QueryParams>;
 
 
 interface IInterceptRequest<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   > {
@@ -36,9 +36,9 @@ interface IInterceptRequest<
 
 export type TInterceptRequestFn<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   > = (req: TRequestType<Body, Headers, Cookies, URLParams, QueryParams>, ...services: Services) =>
@@ -47,9 +47,9 @@ export type TInterceptRequestFn<
 
 export function createRequestInterceptor<
   Body extends TRequestBody | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
   Services extends unknown[] = unknown[],
   >(options: IInterceptRequest<Body, Headers, Cookies, URLParams, QueryParams, Services>) {

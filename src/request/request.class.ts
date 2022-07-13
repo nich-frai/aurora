@@ -1,23 +1,23 @@
 import { Lifetime, type AwilixContainer } from 'awilix';
 import { randomUUID } from 'node:crypto';
+import type { TQueryParamsSchema } from 'parser/queryParams';
 import type { TBodySchema } from 'schema/body';
 import type { IFile, TFileSchema } from 'schema/file';
 import type { Class, JsonValue, Merge } from 'type-fest';
-import type { TypeOf, ZodBoolean, ZodNumber, ZodOptional, ZodString, ZodType, ZodTypeDef } from 'zod';
+import type { TypeOf, ZodOptional, ZodString } from 'zod';
+import type { TCookiesSchema } from '../parser/cookies';
 import type { HTTPIncomingHeaders, Route } from '../route/route.class';
 import { toDependencyResolver } from '../utils/to_dependency_resolver';
 
-export type TRequestHeaders = { [name in HTTPIncomingHeaders]?: ZodString };
-export type TRequestCookies = { [name: string]: ZodString | ZodOptional<ZodString> };
-export type TRequestURLParams = { [name: string]: ZodString | ZodOptional<ZodString> };
-export type TRequestQueryParams = { [name: string]: ZodString | ZodNumber | ZodBoolean | ZodOptional<ZodString | ZodNumber | ZodBoolean> };
+export type THeadersSchema = { [name in HTTPIncomingHeaders]?: ZodString };
+export type TUrlParamsSchema = { [name: string]: ZodString | ZodOptional<ZodString> };
 
 export class Request<
   Body extends TBodySchema | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Files extends TFileSchema | undefined = undefined
   > {
 
@@ -85,10 +85,10 @@ export interface IHTTPRequestContext {
 
 export type TRequestType<
   Body extends TBodySchema | undefined = undefined,
-  Headers extends TRequestHeaders | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
-  URLParams extends TRequestURLParams | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  Headers extends THeadersSchema | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
+  URLParams extends TUrlParamsSchema | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Files extends TFileSchema | undefined = undefined,
   > = Omit<Request, "body" | "urlParams" | "queryParams" | "cookies" | "files">
   & (Body extends undefined ? {} : { body: TypeOf<NonNullable<Body>> })

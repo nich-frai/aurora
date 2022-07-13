@@ -1,78 +1,71 @@
+import type { TRawInterceptor, RouteGuard } from "aurora.lib";
 import type { AwilixContainer } from "awilix";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { TBodySchema } from "schema/body";
+import type { TFileSchema } from "schema/file";
 import type { AnyZodObject } from "zod";
 import { BadRequest, InternalServerError, Unauthorized } from "../error/http_error";
 import { MissingServiceInContainer } from "../error/missing_service.error";
 import { Logger } from "../logger";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
 import type { TResponseInterceptionMoment, TResponseInterceptor } from "../middleware/response_interceptor";
-import { parseBodyIntoRequest } from "../parser/body";
-import { cookieParser } from "../parser/cookies";
-import { queryParamsParser } from "../parser/queryParams";
-import { Request, TRequestBody, TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestURLParams } from "../request/request.class";
+import { createBodyParser } from "../parser/body";
+import { cookieParser, type TCookiesSchema } from "../parser/cookies";
+import { queryParamsParser, TQueryParamsSchema } from "../parser/queryParams";
+import { Request, THeadersSchema, TUrlParamsSchema } from "../request/request.class";
 import { Response } from "../response/response.class";
 import type { Route } from "../route/route.class";
 
 export class Handler {
 
+  static fromRoute = createHandlerFromRoutefromRoute;
+
   #cachedFunctionParameters = new Map<Function, string[]>();
 
   #logger: Logger;
 
-  // schemas, contributed by route handlers, guards and interceptor
-  body?: TRequestBody;
-  headers?: TRequestHeaders;
-  cookies?: TRequestCookies;
-  urlParams?: TRequestURLParams;
-  queryParams?: TRequestQueryParams;
+  acceptsContentType : string | string[] | undefined = undefined;
+
+  // -- schemas, contributed by route handlers, guards and interceptor
+  body?: TBodySchema;
+  headers?: THeadersSchema;
+  cookies?: TCookiesSchema;
+  urlParams?: TUrlParamsSchema;
+  queryParams?: TQueryParamsSchema;
+  files? : TFileSchema;
+
+  // -- interceptors
+  rawInterceptors: TRawInterceptor[] = [];
+  requestInterceptors: TRequestInterceptor[] = [];
+  guards: RouteGuard[] = [];
+  responseInterceptors: TResponseInterceptor[] = [];
+
+  handler: Route['handler'] = () => {
+    return 'default handler return!';
+  }
 
   get injector() {
     return this.container;
   }
 
-  addResponseInterceptor(interceptor: TResponseInterceptor) {
-
-    if (this.route.responseInterceptor == null) {
-      this.route.responseInterceptor = [];
-    }
-
-    this.route.responseInterceptor.push(interceptor);
-  }
-
-  addRequestInterceptor(interceptor: TRequestInterceptor) {
-    if (this.route.requestInterceptor == null) {
-      this.route.requestInterceptor = [];
-    }
-
-    this.route.requestInterceptor.push(interceptor);
-  }
-
   constructor(
     private container: AwilixContainer,
-    private route: Route
+    private method: string,
+    private url: string,
+    //private route: Route
   ) {
     this.#logger = new Logger(
       container,
-      `${Handler.name}::${route.method?.toLocaleUpperCase() ?? 'GET'}"${route.url ?? '/'}"`
+      `${Handler.name}::${this.method?.toLocaleUpperCase() ?? 'GET'}"${this.url ?? '/'}"`
     );
+  }
 
-    // 1. Schemas contributions from interceptors
-    for (let contributor of this.route.requestInterceptor ?? []) {
-      // ignore interceptor functions
-      if (typeof contributor === 'function') continue;
-      this.addSchema(contributor);
-    }
+  addResponseInterceptor(interceptor: TResponseInterceptor) {
+    this.responseInterceptors.push(interceptor);
+  }
 
-    // 2. Schemas contributions from guards
-    for (let contributor of this.route.guards ?? []) {
-      // ignore guard functions
-      if (typeof contributor === 'function') continue;
-      this.addSchema(contributor);
-    }
-
-    // 3. Schemas contribution from the route handler itself
-    this.addSchema(route);
-
+  addRequestInterceptor(interceptor: TRequestInterceptor) {
+    this.requestInterceptors.push(interceptor);
   }
 
   addSchema(contributor: IContributeSchema) {
@@ -82,23 +75,23 @@ export class Handler {
     }
 
     if (contributor.headers != null) {
-      if (this.headers != null) this.headers = { ...contributor.headers! as TRequestHeaders, ...this.headers };
+      if (this.headers != null) this.headers = { ...contributor.headers! as THeadersSchema, ...this.headers };
       else this.headers = contributor.headers;
     }
 
     if (contributor.cookies != null) {
-      if (this.cookies != null) this.cookies = { ...contributor.cookies! as TRequestCookies, ...this.cookies };
+      if (this.cookies != null) this.cookies = { ...contributor.cookies! as TCookiesSchema, ...this.cookies };
       else this.cookies = contributor.cookies;
     }
 
     if (contributor.urlParams != null) {
       if (this.urlParams != null)
-        this.urlParams = { ...contributor.urlParams! as TRequestURLParams, ...this.urlParams };
+        this.urlParams = { ...contributor.urlParams! as TUrlParamsSchema, ...this.urlParams };
       else this.urlParams = contributor.urlParams;
     }
 
     if (contributor.queryParams != null) {
-      if (this.queryParams != null) this.queryParams = { ...contributor.queryParams! as TRequestURLParams, ...this.queryParams };
+      if (this.queryParams != null) this.queryParams = { ...contributor.queryParams! as TUrlParamsSchema, ...this.queryParams };
       else this.queryParams = contributor.queryParams;
     }
   }
@@ -123,12 +116,12 @@ export class Handler {
     }
 
     // apply raw interceptors
-    for (let interceptor of this.route.rawInterceptor ?? []) {
+    for (let interceptor of this.rawInterceptors ?? []) {
       const fn = typeof interceptor === 'function' ? interceptor : interceptor.interceptor;
       let intercepted = await fn(req, res, request as any);
 
       if (intercepted instanceof Response || intercepted instanceof Error) {
-        
+
         const isErrorResponse = intercepted instanceof Error || (intercepted instanceof Response && intercepted.status() >= 400);
         const moment = isErrorResponse
           ? 'raw-interceptor-prevented-progression-with-error-response'
@@ -181,20 +174,20 @@ export class Handler {
     // call route handler function
     let handlerResponse;
     let handlerServices: unknown[] | Error;
-    handlerServices = this.resolveServices(container, this.getFunctionServices(this.route.handler, 1));
+    handlerServices = this.resolveServices(container, this.getFunctionServices(this.handler, 1));
     if (handlerServices instanceof Error) {
       this.#logger.fatal(
         'Failed to resolve services from route handler ',
-        { url: this.route.url, method: this.route.method },
+        { url: this.url, method: this.method },
         "List of route hanlder dependencies:",
-        this.getFunctionServices(this.route.handler, 1)
+        this.getFunctionServices(this.handler, 1)
       );
       return Response.error(
         new InternalServerError("Missing/unresolved required service for this route")
       ).send(res);
     }
     try {
-      handlerResponse = await this.route.handler(request, ...handlerServices);
+      handlerResponse = await this.handler(request, ...handlerServices);
     } catch (err) {
       if (err instanceof Error) {
         handlerResponse = Response.error(err)
@@ -229,11 +222,10 @@ export class Handler {
   }
 
   private async forgeRequest(req: IncomingMessage, urlParams: Record<string, string | undefined>, container: AwilixContainer) {
-    const route = this.route;
 
     // 1: define id, method and url
     const request: Request = new Request(container, req.url!, req.method!);
-    
+
     // 2: initialize data with empty objects
 
     //@ts-ignore should check the "cookie" header which will come as string[]! 
@@ -242,23 +234,11 @@ export class Handler {
     request.body = {};
     request.urlParams = urlParams ?? {};
     request.files = {};
-    
-    // 3: check if body schema is present
-    if (this.body != null) {
-      await parseBodyIntoRequest(container, req, request, route);
-      // validate body
-      let parsedBody = (this.body as TRequestBody).safeParse(request.body);
-      if (!parsedBody.success) {
-        return new BadRequest("Incorrect body arguments!" + parsedBody.error.toString())
-      }
-      //@ts-ignore the untyped request has a body of "never" and herefore typescript will complain
-      request.body = parsedBody.data;
-    }
 
     //  3: check if there are required headers
     if (this.headers != null) {
-      for (let headerKey in (this.headers as TRequestHeaders)) {
-        let parser = (this.headers as TRequestHeaders)[headerKey]!;
+      for (let headerKey in (this.headers as THeadersSchema)) {
+        let parser = (this.headers as THeadersSchema)[headerKey]!;
         let value = request.headers[headerKey];
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
@@ -274,8 +254,8 @@ export class Handler {
     // 4: check for cookies
     if (this.cookies != null) {
       let parsedCookies = cookieParser(req.headers['cookie'] ?? '');
-      for (let cookieKey in (this.cookies as TRequestCookies)) {
-        let parser = (this.cookies as TRequestCookies)[cookieKey];
+      for (let cookieKey in (this.cookies as TCookiesSchema)) {
+        let parser = (this.cookies as TCookiesSchema)[cookieKey];
         let value = parsedCookies[cookieKey];
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
@@ -290,8 +270,8 @@ export class Handler {
 
     // 5: check for url params
     if (this.urlParams != null) {
-      for (let urlKey in (this.urlParams as TRequestURLParams)) {
-        let parser = (this.urlParams as TRequestURLParams)[urlKey];
+      for (let urlKey in (this.urlParams as TUrlParamsSchema)) {
+        let parser = (this.urlParams as TUrlParamsSchema)[urlKey];
         let value = urlParams[urlKey];
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
@@ -307,8 +287,8 @@ export class Handler {
     // 6: check for query params
     if (this.queryParams != null) {
       let parsedQueryParams = queryParamsParser(req.url ?? '');
-      for (let queryKey in (this.queryParams as TRequestQueryParams)) {
-        let parser = (this.queryParams as TRequestQueryParams)[queryKey];
+      for (let queryKey in (this.queryParams as TQueryParamsSchema)) {
+        let parser = (this.queryParams as TQueryParamsSchema)[queryKey];
         let value = parsedQueryParams[queryKey];
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
@@ -326,15 +306,14 @@ export class Handler {
   }
 
   private async applyRequestInterceptors(request: Request, container: AwilixContainer): Promise<Request | Error | Response> {
-    const route = this.route;
 
-    for (let interceptor of route.requestInterceptor ?? []) {
+    for (let interceptor of this.requestInterceptors ?? []) {
       let interceptorFn = typeof interceptor === 'function' ? interceptor : interceptor.interceptor;
       let injectServices = this.resolveServices(container, this.getFunctionServices(interceptorFn, 1));
       if (injectServices instanceof Error) {
         this.#logger.fatal(
           'Failed to resolve services from response interceptor!',
-          { url: this.route.url, method: this.route.method },
+          { url: this.url, method: this.method },
           this.getParamNames(interceptorFn)
         );
         return Response.error(new InternalServerError("Missing/unresolved required service for this route"));
@@ -364,7 +343,7 @@ export class Handler {
       response = responseOrError;
     }
 
-    const interceptors = this.route.responseInterceptor ?? [];
+    const interceptors = this.responseInterceptors ?? [];
 
     for (const interceptor of interceptors) {
       const interceptorFn = typeof interceptor === 'function' ? interceptor : interceptor.interceptor;
@@ -372,7 +351,7 @@ export class Handler {
       if (injectServices instanceof Error) {
         this.#logger.fatal(
           'Failed to resolve services from response interceptor!',
-          { url: this.route.url, method: this.route.method },
+          { url: this.url, method: this.method },
           this.getParamNames(interceptorFn)
         );
         return Response.error(new InternalServerError("Missing/unresolved required service for this route"));
@@ -394,13 +373,13 @@ export class Handler {
     request: Request,
     container: AwilixContainer,
   ) {
-    for (let guard of this.route.guards ?? []) {
+    for (let guard of this.guards ?? []) {
       let guardFn = typeof guard === 'function' ? guard : guard.guard;
       let guardServices = this.resolveServices(container, this.getFunctionServices(guardFn, 1));
       if (guardServices instanceof Error) {
         this.#logger.fatal(
           'Failed to resolve services from request guard!',
-          { url: this.route.url, method: this.route.method },
+          { url: this.url, method: this.method },
           this.getParamNames(guardFn),
         );
         return new InternalServerError("Missing/unresolved required service for this route");
@@ -448,18 +427,74 @@ export class Handler {
     return result;
   }
 
+  buildDataParsers() {
+    // remove previous ones
+    this.rawInterceptors = this.rawInterceptors.filter(
+      (interceptor => {
+        return ![
+          'aurora.body.parser',
+          'aurora.cookies.parser',
+          'aurora.queryParams.parser',
+          'aurora.urlParams.validator',
+          'aurora.headers.validator'
+        ].includes(interceptor.name)
+      })
+    );
+
+    // generate based on schema
+
+    // 1. the body parser
+    if(this.body != null) {
+      let bodyParser = createBodyParser(
+        { body : this.body, files : this.files, },
+        this.acceptsContentType
+      );
+    }
+  }
+}
+
+export function createHandlerFromRoutefromRoute(
+  useContainer: AwilixContainer,
+  route: Route
+) {
+
+  const handler = new Handler(
+    useContainer,
+    route.method ?? 'GET',
+    route.url ?? '/'
+  );
+
+  // 1. Schemas contributions from interceptors
+  for (let contributor of route.requestInterceptor ?? []) {
+    // ignore interceptor functions
+    if (typeof contributor === 'function') continue;
+    handler.addSchema(contributor);
+  }
+
+  // 2. Schemas contributions from guards
+  for (let contributor of route.guards ?? []) {
+    // ignore guard functions
+    if (typeof contributor === 'function') continue;
+    handler.addSchema(contributor);
+  }
+
+  // 3. Schemas contribution from the route handler itself
+  handler.addSchema(route);
+
+  // 4. Based on schema create the necessary data parsers
+  handler.buildDataParsers();
+
+  return handler;
 }
 
 const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
 const ARGUMENT_NAMES = /([^\s,]+)/g;
 
-
-const DEFAULT_INTERCEPTION_MOMENT: TResponseInterceptionMoment = 'handler-finished-with-ok-response';
-
 interface IContributeSchema {
-  body?: TRequestBody;
-  headers?: TRequestHeaders;
-  cookies?: TRequestCookies;
-  urlParams?: TRequestURLParams;
-  queryParams?: TRequestQueryParams;
+  body?: TBodySchema;
+  headers?: THeadersSchema;
+  cookies?: TCookiesSchema;
+  urlParams?: TUrlParamsSchema;
+  queryParams?: TQueryParamsSchema;
+  files? : TFileSchema;
 }

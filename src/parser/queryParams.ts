@@ -1,3 +1,5 @@
+import type { ZodString, ZodNumber, ZodBoolean, ZodOptional } from "zod";
+
 export function queryParamsParser(url : string) {
 
   const parsed = new URLSearchParams(url);
@@ -11,3 +13,4 @@ export function queryParamsParser(url : string) {
 
   return response;
 }
+export type TQueryParamsSchema = { [name: string]: ZodString | ZodNumber | ZodBoolean | ZodOptional<ZodString | ZodNumber | ZodBoolean> };

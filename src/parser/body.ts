@@ -1,25 +1,42 @@
-import type { AwilixContainer } from "awilix";
-import type { IncomingMessage } from "node:http";
-import type { IFile, TFileSchema } from "schema/file";
-import type { PartialDeep } from "type-fest";
-import { Size } from "../utils/units";
-import type { THttpConfiguration } from "../config/http.config";
-import { BadRequest, NotAcceptable, PayloadTooLarge } from "../error/http_error";
-import type { Request } from "../request/request.class";
-import type { Route } from "../route/route.class";
-import { deepmerge } from "../utils/deepmerge";
+import type { TRawInterceptor } from "aurora.lib";
 import formidable from "formidable";
+import type IncomingForm from "formidable/Formidable";
+import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
+import type { TBodySchema } from "schema/body";
+import type { IFile, TFileSchema } from "schema/file";
+import { zodSchemaToJSONShape } from "utils/schema_to_json_shape";
+import { BadRequest, PayloadTooLarge, UnsupportedMediaType } from "../error/http_error";
+import type { Route } from "../route/route.class";
+import { Size } from "../utils/units";
+
+type TBodyParserSchema = {
+  body?: TBodySchema;
+  files?: TFileSchema;
+};
+
+export type TBodyParser = (
+  req: IncomingMessage,
+  schema: TBodyParserSchema,
+  options: IParseBodyOptions,
+  ...args: any[]
+) => Promise<{
+  body?: unknown;
+  files?: Record<string, IFile | IFile[]>;
+}>
 
 export interface IParseBodyOptions {
-  maxBodySize: number;
+  maxBodySize?: number;
   charset?: 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' | 'base64' | 'base64url' | 'latin1' | 'binary' | 'hex' | string & {};
 }
+
+export const DEFAULT_MAX_BODY_SIZE = 50 * Size.MB;
 
 async function parseBodyAsString(
   request: IncomingMessage,
   options: IParseBodyOptions,
 ) {
+  const maxBodySize = options.maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
 
   const rawBody = await new Promise<string>((resolve, reject) => {
 
@@ -27,7 +44,7 @@ async function parseBodyAsString(
 
     function concatenateChunk(chunk: any) {
       fullBody += String(chunk);
-      if (fullBody.length > options.maxBodySize) {
+      if (fullBody.length > maxBodySize) {
         reportError(new PayloadTooLarge(`Request payload is bigger than ${options.maxBodySize}`));
       }
     }
@@ -103,6 +120,7 @@ async function parseBodyAsString(
  */
 async function parseApplicationJSON(
   request: IncomingMessage,
+  schema: TBodyParserSchema,
   options: IParseBodyOptions,
 ) {
 
@@ -144,23 +162,16 @@ type MultipartResponse = {
  */
 async function parseMultipartFormData(
   request: IncomingMessage,
-  schema: TFileSchema
-) : Promise<MultipartResponse> {
-
-  const parser = formidable({
-    allowEmptyFiles : false,
-    maxFileSize : schema.maxFileSize,
-    maxTotalFileSize : schema.maxTotalFileSize,
-    multiples : true,
-    uploadDir : schema.uploadLocation ?? tmpdir(),
-    minFileSize : 2 * Size.KB,
-  });
+  schema: TBodyParserSchema,
+  options: IParseBodyOptions,
+  parser: IncomingForm
+): Promise<MultipartResponse> {
 
   return new Promise<MultipartResponse>((resolve, reject) => {
     parser.parse(request, (err, fields, files) => {
-      if(err != null) reject(err);
+      if (err != null) reject(err);
       else {
-        resolve({ 
+        resolve({
           fields, files
         });
       }
@@ -170,6 +181,7 @@ async function parseMultipartFormData(
 
 async function parseURLEncoded(
   request: IncomingMessage,
+  schema: TBodyParserSchema,
   options: IParseBodyOptions
 ) {
 
@@ -189,105 +201,21 @@ async function parseURLEncoded(
 
 async function parsePlainText(
   request: IncomingMessage,
+  schema: TBodyParserSchema,
   options: IParseBodyOptions
 ) {
-  return parseBodyAsString(request, options);
+  return parseBodyAsString(request, options).then(s => ({ body: s }));
 }
 
-export const bodyParser = {
+export const bodyParser: Record<string, TBodyParser> = {
   'text/plain': parsePlainText,
   'application/json': parseApplicationJSON,
   'multipart/form-data': parseMultipartFormData,
   'application/x-www-form-urlencoded': parseURLEncoded
 };
 
-
-/**
- * Default contentType by RFC 2616
- * 
- * "If and only if the media type is not given by a Content-Type field, the recipient MAY attempt to guess the media 
- * type via inspection of its content and/or the name extension of the URI used to identify the resource. If the media type remains unknown, 
- * the recipient SHOULD treat it as type "application/octet-stream"
- * 
- * @link https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
- */
-const DEFAULT_CONTENT_TYPE = (route: Route) => {
-  /** 
-   * Since, by the RFC, we are allowed to "guess" the content-type, 
-   * if its not present, we shall "rely" on the route schemas to guess it  
-   */
-
-  // So we will assume "application/json" if no "files" schema is present and "multipart/form-data" otherwise
-  if (route.files != null) return 'multipart/form-data';
-  return 'application/json';
-};
-
-function getCompleteRouteConfig(
-  container: AwilixContainer,
-  options?: PartialDeep<THttpConfiguration['route']>
-): THttpConfiguration['route'] {
-  const defaultConfig = container.resolve<THttpConfiguration>('httpConfiguration');
-
-  return deepmerge(
-    defaultConfig.route,
-    options as any
-  );
-}
-
-export async function parseBodyIntoRequest(
-  container: AwilixContainer,
-  body: IncomingMessage,
-  request: Request,
-  route: Route
-) {
-
-  // content type should be case-insensitive, lowercasing them all
-  const contentType = parseContentType(body.headers['content-type']?.toLocaleLowerCase() ?? DEFAULT_CONTENT_TYPE(route));
-
-  //should we do smt about encoding? nodejs handles it for us?
-  //const contentEncoding = body.headers['content-encoding'] ?? '';
-
-  const routeConfig = getCompleteRouteConfig(container, route);
-
-  switch (contentType.type) {
-    case 'application/json':
-      const parsedJSONResponse = await bodyParser['application/json'](body, {
-        charset: contentType.params.charset,
-        maxBodySize: routeConfig.body.maxBodySize,
-      });
-      request.body = parsedJSONResponse;
-      return request;
-    case 'application/x-www-form-urlencoded':
-      const parsedURLEncodedResponse = await bodyParser['application/x-www-form-urlencoded'](body, {
-        charset: contentType.params.charset,
-        maxBodySize: routeConfig.body.maxBodySize,
-      });
-      request.body = parsedURLEncodedResponse;
-      return request;
-    case 'text/plain':
-      const parsedTextResponse = await bodyParser['text/plain'](body, {
-        charset: contentType.params.charset,
-        maxBodySize: routeConfig.body.maxBodySize,
-      });
-      request.body = parsedTextResponse as any;
-      return request;
-    case 'multipart/form-data':
-      const parsedMulipart = await bodyParser['multipart/form-data'](
-        body,
-        {
-          files: {},
-          maxTotalFileSize : routeConfig.body.maxBodySize,
-          maxFiles: 20,
-          maxFileSize: 10 * Size.MB,
-          ...(route.files ?? {})
-        }
-      );
-      request.body = parsedMulipart.fields as any;
-      request.files = parsedMulipart.files as any;
-      return request;
-    default:
-      throw new NotAcceptable("The content-type provided (" + contentType.type + ") is not suported by this server!")
-  }
+export function setContentTypeParser(type: string, parser: TBodyParser) {
+  bodyParser[type] = parser;
 }
 
 /**
@@ -391,15 +319,102 @@ interface UnknownParams {
   params: Record<string, string>;
 }
 
-type SupportedContentType =
-  | 'text/plain'
-  | 'multipart/form-data'
-  | 'application/json'
-  | 'application/';
-
 export function createBodyParser(
-  forContentType: SupportedContentType | SupportedContentType[],
+  schema: { body?: TBodySchema; files?: TFileSchema },
+  acceptsContentType: string | string[] | undefined,
+  maxBodySize?: number
+): TRawInterceptor {
 
-) {
+  // try and guess the content type if its null
+  if (acceptsContentType == null) {
+    if (schema.files != null) {
+      acceptsContentType = 'multipart/form-data';
+    } else if (schema.body != null) {
+      acceptsContentType = ['application/json', 'application/x-www-form-urlencoded'];
+    } else {
+      // TODO: decide if we should throw here... a body parser with no schema was set...
+      acceptsContentType = ['text/plain', ''];
+    }
+  }
+  
+  // create formidable for this parser
+  let multipartParser: undefined | IncomingForm;
+  if (schema.files != null) {
+    multipartParser = formidable({
+      allowEmptyFiles: false,
+      multiples: true,
+      maxFileSize: schema.files.maxFileSize,
+      maxTotalFileSize: schema.files.maxTotalFileSize,
+      minFileSize: 2 * Size.KB,
+      uploadDir: schema.files.uploadLocation ?? tmpdir()
+    });
+  }
 
+  return {
+    name: 'aurora.body.parser',
+    async interceptor(req, res, request) {
+      // check content type
+      const requestContentType = req.headers['content-type'] != null ? parseContentType(req.headers['content-type']).type : '';
+      const matchesWithContentType = typeof acceptsContentType === 'string'
+        ? requestContentType.trim() === acceptsContentType
+        : acceptsContentType?.includes(requestContentType) ?? false;
+
+      if (!matchesWithContentType) {
+        return new BadRequest(`The provided content type is not handled by this route!\nThe accepted content-types are: ${typeof acceptsContentType === 'string'
+          ? acceptsContentType
+          : acceptsContentType?.join(', ') ?? 'no acceptable content-type!'};`);
+      }
+
+      if (!(requestContentType in bodyParser)) {
+        return new UnsupportedMediaType(
+          `There is no known parser for the content-type of ${requestContentType}!\nThe known content parsers are: ${Object.keys(bodyParser).join(', ')}.\nThis route accepts the following content-types: ${typeof acceptsContentType === 'string'
+            ? acceptsContentType
+            : acceptsContentType?.join(', ') ?? 'no acceptable content-type!'}.`
+        );
+      }
+
+
+      const parser = bodyParser[requestContentType];
+
+      const parsed = await parser(
+        req,
+        schema,
+        { maxBodySize: maxBodySize },
+        multipartParser
+      );
+
+      // check parsed values
+      if (schema.body != null) {
+        let safeParse = schema.body.safeParse(parsed.body);
+        if (!safeParse.success) {
+          return new BadRequest(`The provided body have an incorrect shape!\nThe expected body shape is the following: ${JSON.stringify(zodSchemaToJSONShape(schema.body))}`)
+        }
+        request.body = safeParse.data;
+      }
+
+      if (schema.files != null) {
+        for (let fileField in schema.files.files) {
+          let fileOptions = schema.files.files[fileField];
+
+          // make sure that the file field is present if non optional
+          if (fileOptions.optional !== true) {
+            if (parsed.files?.[fileField] == null) {
+              return new BadRequest(`The provided body lacks a file field named as ${fileField} that is required!`);
+            }
+          }
+
+          // check if multiple file were sent on a non-multiple file
+          if (fileOptions.multiple !== true) {
+
+          }
+          // else normalize incoming files to ALWAYS be an array when multiple is set!
+          else {
+
+          }
+        }
+      }
+
+
+    }
+  };
 }

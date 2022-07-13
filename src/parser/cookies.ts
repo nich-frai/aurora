@@ -1,4 +1,7 @@
+import type { ZodOptional, ZodString } from "zod";
 import { BadRequest } from "../error/http_error";
+
+export type TCookiesSchema = { [name: string]: ZodString | ZodOptional<ZodString> };
 
 export function cookieParser(cookieStr : string) : Record<string, string> {
   if(cookieStr.length === 0){
