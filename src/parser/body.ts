@@ -392,3 +392,16 @@ interface UnknownParams {
   type: string;
   params: Record<string, string>;
 }
+
+type SupportedContentType = 
+| 'text/plain' 
+| 'multipart/form-data' 
+| 'application/json'
+| 'application/';
+
+export function createBodyParser(
+  forContentType : SupportedContentType | SupportedContentType[],
+
+) {
+
+}

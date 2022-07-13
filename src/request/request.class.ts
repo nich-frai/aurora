@@ -29,30 +29,32 @@ export class Request<
 
   issuedAt!: Date;
 
-  headers!: Merge<
-    { [name in HTTPIncomingHeaders]?: string },
-    { [name in keyof NonNullable<Headers>]-?: string }
-  >;
+  headers!: Headers extends NonNullable<Headers>
+    ? Merge<
+      { [name in HTTPIncomingHeaders]?: string },
+      { [name in keyof NonNullable<Headers>]: string }
+    >
+    : { [name in HTTPIncomingHeaders]?: string };
 
-  body!: Body extends NonNullable<Body> 
-   ? TypeOf<Body> 
-   : never;
+  body!: Body extends NonNullable<Body>
+    ? TypeOf<Body>
+    : {};
 
-  urlParams?: URLParams extends NonNullable<URLParams>
+  urlParams!: URLParams extends NonNullable<URLParams>
     ? { [name in keyof URLParams]: string }
     : { [name: string]: string | undefined }
 
-  queryParams?: QueryParams extends NonNullable<QueryParams> 
-    ?  { [name in keyof QueryParams]: TypeOf<QueryParams[name]> }
-    : never ;
+  queryParams!: QueryParams extends NonNullable<QueryParams>
+    ? { [name in keyof QueryParams]: TypeOf<QueryParams[name]> }
+    : {};
 
-  cookies?: Cookies extends NonNullable<Cookies> 
-   ? {  [name in keyof Cookies]: string }
-   : never;
+  cookies!: Cookies extends NonNullable<Cookies>
+    ? { [name in keyof Cookies]: string }
+    : {};
 
-  files?: Files extends null | undefined ? never : {
-    [name in keyof NonNullable<Files>]: File
-  };
+  files!: Files extends NonNullable<Files> 
+    ?  { [name in keyof NonNullable<Files>]: File } 
+    : {};
 
   constructor(
     private container: AwilixContainer,

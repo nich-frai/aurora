@@ -1,7 +1,7 @@
 import type { AwilixContainer } from "awilix";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AnyZodObject } from "zod";
-import { BadRequest, HTTPError, InternalServerError, Unauthorized } from "../error/http_error";
+import { BadRequest, InternalServerError, Unauthorized } from "../error/http_error";
 import { MissingServiceInContainer } from "../error/missing_service.error";
 import { Logger } from "../logger";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
@@ -233,10 +233,17 @@ export class Handler {
 
     // 1: define id, method and url
     const request: Request = new Request(container, req.url!, req.method!);
-    request.headers = Object.entries(req.headers)
-      .reduce((o, [k, v]) => { o[k] = String(v); return o; }, {} as Record<string, string>);
+    
+    // 2: initialize data with empty objects
 
-    // 2: check if body schema is present
+    //@ts-ignore should check the "cookie" header which will come as string[]! 
+    request.headers = { ...req.headers };
+    request.queryParams = {};
+    request.body = {};
+    request.urlParams = urlParams ?? {};
+    request.files = {};
+    
+    // 3: check if body schema is present
     if (this.body != null) {
       await parseBodyIntoRequest(container, req, request, route);
       // validate body
@@ -244,14 +251,15 @@ export class Handler {
       if (!parsedBody.success) {
         return new BadRequest("Incorrect body arguments!" + parsedBody.error.toString())
       }
-      request.body = parsedBody.data as any;
+      //@ts-ignore the untyped request has a body of "never" and herefore typescript will complain
+      request.body = parsedBody.data;
     }
 
     //  3: check if there are required headers
     if (this.headers != null) {
       for (let headerKey in (this.headers as TRequestHeaders)) {
         let parser = (this.headers as TRequestHeaders)[headerKey]!;
-        let value = (request.headers as any)[headerKey];
+        let value = request.headers[headerKey];
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
           if (value == null) {
@@ -259,13 +267,12 @@ export class Handler {
           }
           return new BadRequest(`A header parameter could not be validated! ${parsed.error.toString()}`);
         }
-        (request.headers as any)[headerKey] = parsed.data;
+        request.headers[headerKey] = parsed.data;
       }
     }
 
     // 4: check for cookies
     if (this.cookies != null) {
-      request.cookies = {} as any;
       let parsedCookies = cookieParser(req.headers['cookie'] ?? '');
       for (let cookieKey in (this.cookies as TRequestCookies)) {
         let parser = (this.cookies as TRequestCookies)[cookieKey];
@@ -283,7 +290,6 @@ export class Handler {
 
     // 5: check for url params
     if (this.urlParams != null) {
-      request.urlParams = urlParams ?? {} as any;
       for (let urlKey in (this.urlParams as TRequestURLParams)) {
         let parser = (this.urlParams as TRequestURLParams)[urlKey];
         let value = urlParams[urlKey];
@@ -300,7 +306,6 @@ export class Handler {
 
     // 6: check for query params
     if (this.queryParams != null) {
-      request.queryParams = {} as any;
       let parsedQueryParams = queryParamsParser(req.url ?? '');
       for (let queryKey in (this.queryParams as TRequestQueryParams)) {
         let parser = (this.queryParams as TRequestQueryParams)[queryKey];
