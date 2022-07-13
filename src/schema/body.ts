@@ -1,5 +1,6 @@
-import type { z } from "zod";
-import type { TBodySchema } from '../request/request.class';
+import type { SomeZodObject } from "zod";
+
+export type TBodySchema = SomeZodObject;
 
 export function mergeBodySchema(
 	...schemas : (TBodySchema | undefined)[]
@@ -7,7 +8,7 @@ export function mergeBodySchema(
 	
 	let mergedSchema : undefined | TBodySchema = undefined;
 
-	for(let schema in schemas) {
+	for(let schema of schemas) {
 		if(schema == null) continue;
 		if(mergedSchema == null) {
 			mergedSchema = schema;
@@ -18,5 +19,3 @@ export function mergeBodySchema(
 
 	return mergedSchema;
 }
-
-export type TBodySchema = z.SomeZodObject;

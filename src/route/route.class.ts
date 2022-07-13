@@ -1,11 +1,13 @@
-import type { THttpConfiguration } from "../config/http.config";
 import type { HTTPMethod } from "find-my-way";
-import type { PartialDeep } from "type-fest";
-import type { TResponseInterceptor } from "../middleware/response_interceptor";
-import type { TRequestInterceptor } from "../middleware/request_interceptor";
-import type { TRequestType, TRequestBody, TRequestCookies, TRequestFiles, TRequestHeaders, TRequestQueryParams, TRequestURLParams } from "../request/request.class";
 import type { RouteGuard } from "middleware/guard";
 import type { TRawInterceptor } from "middleware/raw";
+import type { TBodySchema } from "schema/body";
+import type { TFileSchema } from "schema/file";
+import type { PartialDeep } from "type-fest";
+import type { THttpConfiguration } from "../config/http.config";
+import type { TRequestInterceptor } from "../middleware/request_interceptor";
+import type { TResponseInterceptor } from "../middleware/response_interceptor";
+import type { TRequestCookies, TRequestHeaders, TRequestQueryParams, TRequestType, TRequestURLParams } from "../request/request.class";
 
 /**
  * [HTTP] Route
@@ -17,12 +19,12 @@ import type { TRawInterceptor } from "middleware/raw";
  * 
  */
 export class Route<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
-  Files extends TRequestFiles | undefined = undefined,
+  Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[],
   > {
 
@@ -156,23 +158,23 @@ export class Route<
  * 
  */
 type HTTPRequestHandler<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
-  Files extends TRequestFiles | undefined = undefined,
+  Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[],
   > = (req: TRequestType<Body, Headers, Cookies, URLParams, QueryParams, Files>, ...services: Services) => unknown | Promise<unknown>;
 
 
 export function createRoute<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
-  Files extends TRequestFiles | undefined = undefined,
+  Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[]
 >(options: Omit<ICreateRouteOptions<Body, Headers, Cookies, URLParams, QueryParams, Files, Services>, "provide">) {
 
@@ -202,12 +204,12 @@ export function createRoute<
 }
 
 export type ICreateRouteOptions<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
-  Files extends TRequestFiles | undefined = undefined,
+  Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[]
   > = {
     method?: Lowercase<HTTPMethod>;

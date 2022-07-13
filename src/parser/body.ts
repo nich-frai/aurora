@@ -1,12 +1,15 @@
+import type { AwilixContainer } from "awilix";
+import type { IncomingMessage } from "node:http";
+import type { IFile, TFileSchema } from "schema/file";
+import type { PartialDeep } from "type-fest";
+import { Size } from "../utils/units";
 import type { THttpConfiguration } from "../config/http.config";
 import { BadRequest, NotAcceptable, PayloadTooLarge } from "../error/http_error";
 import type { Request } from "../request/request.class";
 import type { Route } from "../route/route.class";
 import { deepmerge } from "../utils/deepmerge";
-import formidable, { File } from "formidable";
-import type { IncomingMessage } from "node:http";
-import type { PartialDeep } from "type-fest";
-import type { AwilixContainer } from "awilix";
+import formidable from "formidable";
+import { tmpdir } from "node:os";
 
 export interface IParseBodyOptions {
   maxBodySize: number;
@@ -69,7 +72,6 @@ async function parseBodyAsString(
         request.once('data', checkForEarlyJSONValidity);
         return;
       }
-
     }
 
     // has a valid charset information ?
@@ -122,13 +124,11 @@ async function parseApplicationJSON(
 
 }
 
-interface IParseMultipartFormDataOptions {
-  maxBodySize: number;
-  maxFileSize: number;
-  acceptMime: string | string[];
-  maxFiles: number;
-  minimumFileSize: number;
-}
+type MultipartResponse = {
+  files: Record<string, IFile | IFile[]>;
+  fields: Record<string, unknown>;
+};
+
 /**
  * [Body Parser] Multipart/Form-Data
  * ----------------------------------
@@ -144,31 +144,26 @@ interface IParseMultipartFormDataOptions {
  */
 async function parseMultipartFormData(
   request: IncomingMessage,
-  options: IParseMultipartFormDataOptions
-) {
+  schema: TFileSchema
+) : Promise<MultipartResponse> {
 
   const parser = formidable({
-    allowEmptyFiles: false,
-    maxFileSize: options.maxFileSize,
-    minFileSize: options.minimumFileSize,
-    maxTotalFileSize: options.maxBodySize,
-    maxFiles: options.maxFiles
+    allowEmptyFiles : false,
+    maxFileSize : schema.maxFileSize,
+    maxTotalFileSize : schema.maxTotalFileSize,
+    multiples : true,
+    uploadDir : schema.uploadLocation ?? tmpdir(),
+    minFileSize : 2 * Size.KB,
   });
 
-  return new Promise<{
-    files : Record<string, File|File[]>;
-    fields: Record<string, unknown>;
-  }>((resolve, reject) => {
+  return new Promise<MultipartResponse>((resolve, reject) => {
     parser.parse(request, (err, fields, files) => {
-      if (err != null) {
-        reject(err);
-        return;
+      if(err != null) reject(err);
+      else {
+        resolve({ 
+          fields, files
+        });
       }
-
-      resolve({
-        fields,
-        files
-      });
     });
   });
 }
@@ -216,7 +211,7 @@ export const bodyParser = {
  * 
  * @link https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
  */
- const DEFAULT_CONTENT_TYPE = (route: Route) => {
+const DEFAULT_CONTENT_TYPE = (route: Route) => {
   /** 
    * Since, by the RFC, we are allowed to "guess" the content-type, 
    * if its not present, we shall "rely" on the route schemas to guess it  
@@ -228,7 +223,7 @@ export const bodyParser = {
 };
 
 function getCompleteRouteConfig(
-  container : AwilixContainer,
+  container: AwilixContainer,
   options?: PartialDeep<THttpConfiguration['route']>
 ): THttpConfiguration['route'] {
   const defaultConfig = container.resolve<THttpConfiguration>('httpConfiguration');
@@ -240,7 +235,7 @@ function getCompleteRouteConfig(
 }
 
 export async function parseBodyIntoRequest(
-  container : AwilixContainer,
+  container: AwilixContainer,
   body: IncomingMessage,
   request: Request,
   route: Route
@@ -277,13 +272,16 @@ export async function parseBodyIntoRequest(
       request.body = parsedTextResponse as any;
       return request;
     case 'multipart/form-data':
-      const parsedMulipart = await bodyParser['multipart/form-data'](body, {
-        maxBodySize: routeConfig.body.maxBodySize,
-        acceptMime: routeConfig.files.acceptMimes,
-        maxFiles: routeConfig.files.maxFiles,
-        maxFileSize: routeConfig.files.maxFileSize,
-        minimumFileSize: routeConfig.files.minimunFileSize,
-      });
+      const parsedMulipart = await bodyParser['multipart/form-data'](
+        body,
+        {
+          files: {},
+          maxTotalFileSize : routeConfig.body.maxBodySize,
+          maxFiles: 20,
+          maxFileSize: 10 * Size.MB,
+          ...(route.files ?? {})
+        }
+      );
       request.body = parsedMulipart.fields as any;
       request.files = parsedMulipart.files as any;
       return request;
@@ -393,14 +391,14 @@ interface UnknownParams {
   params: Record<string, string>;
 }
 
-type SupportedContentType = 
-| 'text/plain' 
-| 'multipart/form-data' 
-| 'application/json'
-| 'application/';
+type SupportedContentType =
+  | 'text/plain'
+  | 'multipart/form-data'
+  | 'application/json'
+  | 'application/';
 
 export function createBodyParser(
-  forContentType : SupportedContentType | SupportedContentType[],
+  forContentType: SupportedContentType | SupportedContentType[],
 
 ) {
 

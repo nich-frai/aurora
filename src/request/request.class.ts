@@ -1,26 +1,24 @@
-import { type AwilixContainer, Lifetime } from 'awilix';
+import { Lifetime, type AwilixContainer } from 'awilix';
 import { randomUUID } from 'node:crypto';
-import type { File } from 'formidable';
-import type PersistentFile from 'formidable/PersistentFile';
+import type { TBodySchema } from 'schema/body';
+import type { IFile, TFileSchema } from 'schema/file';
 import type { Class, JsonValue, Merge } from 'type-fest';
-import type { AnyZodObject, TypeOf, ZodBoolean, ZodNumber, ZodOptional, ZodString, ZodType, ZodTypeDef } from 'zod';
+import type { TypeOf, ZodBoolean, ZodNumber, ZodOptional, ZodString, ZodType, ZodTypeDef } from 'zod';
 import type { HTTPIncomingHeaders, Route } from '../route/route.class';
 import { toDependencyResolver } from '../utils/to_dependency_resolver';
 
-export type TRequestBody = AnyZodObject;
 export type TRequestHeaders = { [name in HTTPIncomingHeaders]?: ZodString };
 export type TRequestCookies = { [name: string]: ZodString | ZodOptional<ZodString> };
 export type TRequestURLParams = { [name: string]: ZodString | ZodOptional<ZodString> };
 export type TRequestQueryParams = { [name: string]: ZodString | ZodNumber | ZodBoolean | ZodOptional<ZodString | ZodNumber | ZodBoolean> };
-export type TRequestFiles = Record<string, ZodType<PersistentFile, ZodTypeDef, PersistentFile>>;
 
 export class Request<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
-  Files extends TRequestFiles | undefined = undefined
+  Files extends TFileSchema | undefined = undefined
   > {
 
   id!: string;
@@ -52,8 +50,12 @@ export class Request<
     ? { [name in keyof Cookies]: string }
     : {};
 
-  files!: Files extends NonNullable<Files> 
-    ?  { [name in keyof NonNullable<Files>]: File } 
+  files!: Files extends NonNullable<Files>
+    ? {
+      [name in keyof Files['files']]:
+      Files['files'][name]['multiple'] extends true | number
+      ? Files['files'][name]['optional'] extends true ? IFile[] | undefined : IFile[]
+      : Files['files'][name]['optional'] extends true ? IFile | undefined : IFile }
     : {};
 
   constructor(
@@ -82,12 +84,12 @@ export interface IHTTPRequestContext {
 }
 
 export type TRequestType<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends TRequestHeaders | undefined = undefined,
   Cookies extends TRequestCookies | undefined = undefined,
   URLParams extends TRequestURLParams | undefined = undefined,
   QueryParams extends TRequestQueryParams | undefined = undefined,
-  Files extends TRequestFiles | undefined = undefined,
+  Files extends TFileSchema | undefined = undefined,
   > = Omit<Request, "body" | "urlParams" | "queryParams" | "cookies" | "files">
   & (Body extends undefined ? {} : { body: TypeOf<NonNullable<Body>> })
   & (Headers extends undefined ? {} : {
@@ -112,8 +114,11 @@ export type TRequestType<
       [name in keyof NonNullable<QueryParams>]: TypeOf<NonNullable<QueryParams>[name]>
     }
   })
-  & (Files extends undefined ? {} : {
-    files: {
-      [name in keyof NonNullable<Files>]: File
-    }
-  });
+  & (Files extends NonNullable<Files>
+    ? {
+      [name in keyof Files['files']]:
+      Files['files'][name]['multiple'] extends true | number
+      ? Files['files'][name]['optional'] extends true ? IFile[] | undefined : IFile[]
+      : Files['files'][name]['optional'] extends true ? IFile | undefined : IFile }
+    : {}
+  );
