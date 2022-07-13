@@ -1,5 +1,5 @@
 import { type AwilixContainer, Lifetime } from 'awilix';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import type { File } from 'formidable';
 import type PersistentFile from 'formidable/PersistentFile';
 import type { Class, JsonValue, Merge } from 'type-fest';

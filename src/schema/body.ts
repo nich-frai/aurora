@@ -1,7 +1,8 @@
 import type { z } from "zod";
+import type { TBodySchema } from '../request/request.class';
 
 export function mergeBodySchema(
-	schemas : any[]
+	schemas : TBodySchema[]
 ) {
 
 }
