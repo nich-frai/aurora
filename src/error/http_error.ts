@@ -3,7 +3,6 @@ export class HTTPError extends Error {
  }
  
  export class BadRequest extends HTTPError {
-	 
 	 override status : number = 400;
  }
  

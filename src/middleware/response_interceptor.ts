@@ -38,3 +38,7 @@ Services extends unknown[] = unknown[],
 > = (res: Response, req : TRequestType<Body, Headers, Cookies, URLParams, QueryParams>, ...services: Services) =>
   | Response
   | Promise<Response>;
+
+export function createResponseInterceptor(options : IInterceptResponse) {
+  return options;
+}
