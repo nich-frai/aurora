@@ -34,19 +34,21 @@ export class Request<
     { [name in keyof NonNullable<Headers>]-?: string }
   >;
 
-  body!: Body extends null | undefined ? undefined : TypeOf<NonNullable<Body>>;
+  body!: Body extends NonNullable<Body> 
+   ? TypeOf<Body> 
+   : never;
 
-  urlParams?: URLParams extends null | undefined
-    ? { [name: string]: string | undefined }
-    : { [name in keyof NonNullable<URLParams>]: string };
+  urlParams?: URLParams extends NonNullable<URLParams>
+    ? { [name in keyof URLParams]: string }
+    : { [name: string]: string | undefined }
 
-  queryParams?: QueryParams extends null | undefined ? never : {
-    [name in keyof NonNullable<QueryParams>]: TypeOf<NonNullable<QueryParams>[name]>
-  };
+  queryParams?: QueryParams extends NonNullable<QueryParams> 
+    ?  { [name in keyof QueryParams]: TypeOf<QueryParams[name]> }
+    : never ;
 
-  cookies?: Cookies extends null | undefined ? never : {
-    [name in keyof NonNullable<Cookies>]: string
-  };
+  cookies?: Cookies extends NonNullable<Cookies> 
+   ? {  [name in keyof Cookies]: string }
+   : never;
 
   files?: Files extends null | undefined ? never : {
     [name in keyof NonNullable<Files>]: File
