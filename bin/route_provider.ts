@@ -157,7 +157,7 @@ export class AuroraRouteAutoloader extends EventEmitter implements IRouteObserva
 							addUrlParameterToSchemaController.urlParams![n] = z.string();
 						})
 					}
-	
+					//@ts-ignore
 					allControllers.push(addUrlParameterToSchemaController);
 				}
 				// append directory name
@@ -249,6 +249,7 @@ export async function defaultRouteModuleLoader(
         if (namedExport === 'default' && exportedModule != null && exportedModule.default != null) exportedModule = exportedModule.default;
 
         if (exportedModule instanceof Route) {
+					//@ts-ignore
           allMatchedModules.push(exportedModule);
         }
       }

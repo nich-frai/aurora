@@ -1,13 +1,15 @@
 import type { HTTPMethod } from "find-my-way";
 import type { RouteGuard } from "middleware/guard";
 import type { TRawInterceptor } from "middleware/raw";
+import type { TCookiesSchema } from "parser/cookies";
+import type { TQueryParamsSchema } from "parser/queryParams";
 import type { TBodySchema } from "schema/body";
 import type { TFileSchema } from "schema/file";
 import type { PartialDeep } from "type-fest";
 import type { THttpConfiguration } from "../config/http.config";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
 import type { TResponseInterceptor } from "../middleware/response_interceptor";
-import type { TRequestCookies, THeadersSchema, TRequestQueryParams, TRequestType, TUrlParamsSchema } from "../request/request.class";
+import type { THeadersSchema, TRequestType, TUrlParamsSchema } from "../request/request.class";
 
 /**
  * [HTTP] Route
@@ -21,9 +23,9 @@ import type { TRequestCookies, THeadersSchema, TRequestQueryParams, TRequestType
 export class Route<
   Body extends TBodySchema | undefined = undefined,
   Headers extends THeadersSchema | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
   URLParams extends TUrlParamsSchema | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[],
   > {
@@ -160,9 +162,9 @@ export class Route<
 type HTTPRequestHandler<
   Body extends TBodySchema | undefined = undefined,
   Headers extends THeadersSchema | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
   URLParams extends TUrlParamsSchema | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[],
   > = (req: TRequestType<Body, Headers, Cookies, URLParams, QueryParams, Files>, ...services: Services) => unknown | Promise<unknown>;
@@ -171,9 +173,9 @@ type HTTPRequestHandler<
 export function createRoute<
   Body extends TBodySchema | undefined = undefined,
   Headers extends THeadersSchema | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
   URLParams extends TUrlParamsSchema | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[]
 >(options: Omit<ICreateRouteOptions<Body, Headers, Cookies, URLParams, QueryParams, Files, Services>, "provide">) {
@@ -206,9 +208,9 @@ export function createRoute<
 export type ICreateRouteOptions<
   Body extends TBodySchema | undefined = undefined,
   Headers extends THeadersSchema | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
   URLParams extends TUrlParamsSchema | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Files extends TFileSchema | undefined = undefined,
   Services extends unknown[] = unknown[]
   > = {

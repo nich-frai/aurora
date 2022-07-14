@@ -1,16 +1,19 @@
 import type { TRawInterceptor } from "middleware/raw";
+import type { TCookiesSchema } from "parser/cookies";
+import type { TQueryParamsSchema } from "parser/queryParams";
+import type { THeadersSchema, TUrlParamsSchema } from "request/request.class";
+import type { TBodySchema } from "schema/body";
 import type { RouteGuard } from "../middleware/guard";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
 import type { TResponseInterceptor } from "../middleware/response_interceptor";
-import type { TRequestBody, TRequestCookies, THeadersSchema, TRequestQueryParams, TUrlParamsSchema } from "../request/request.class";
 import type { Route } from "../route/route.class";
 
 export class Controller<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends THeadersSchema | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
   URLParams extends TUrlParamsSchema | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Services extends unknown[] = unknown[]
   > {
 
@@ -97,11 +100,11 @@ export class Controller<
 }
 
 export function createController<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends THeadersSchema | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
   URLParams extends TUrlParamsSchema | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Services extends unknown[] = unknown[],
   >(options: ICreateController<Body, Headers, Cookies, URLParams, QueryParams, Services>) {
   const ctrl = new Controller<Body, Headers, Cookies, URLParams, QueryParams, Services>();
@@ -122,11 +125,11 @@ export function createController<
 }
 
 export interface ICreateController<
-  Body extends TRequestBody | undefined = undefined,
+  Body extends TBodySchema | undefined = undefined,
   Headers extends THeadersSchema | undefined = undefined,
-  Cookies extends TRequestCookies | undefined = undefined,
+  Cookies extends TCookiesSchema | undefined = undefined,
   URLParams extends TUrlParamsSchema | undefined = undefined,
-  QueryParams extends TRequestQueryParams | undefined = undefined,
+  QueryParams extends TQueryParamsSchema | undefined = undefined,
   Services extends unknown[] = unknown[],
   > {
   register?: Record<string, unknown>;

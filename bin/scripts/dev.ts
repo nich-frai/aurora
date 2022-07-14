@@ -93,9 +93,8 @@ export class DevelopmentEnvironment {
 
 		if (isRouteProvider(this.routeProvider)) {
 			const routes = await this.routeProvider.provideRoutes();
-			console.log(routes.map(r => `${r.method}::/${r.url}`))
 			for (let route of routes) {
-				const handler = new Handler(
+				const handler = Handler.fromRoute(
 					container,
 					route
 				);

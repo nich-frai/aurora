@@ -1,5 +1,5 @@
 import type { TRawInterceptor } from "aurora.lib";
-import { BadRequest } from "error/http_error";
+import { BadRequest } from "../error/http_error";
 import type { ZodString, ZodNumber, ZodBoolean, ZodOptional } from "zod";
 
 export function queryParamsParser(url : string) {

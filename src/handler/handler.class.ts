@@ -56,7 +56,7 @@ export class Handler {
   ) {
     this.#logger = new Logger(
       container,
-      `${Handler.name}::${this.method?.toLocaleUpperCase() ?? 'GET'}"${this.url ?? '/'}"`
+      `${Handler.name}::${(this.method?? 'GET').toLocaleUpperCase() }"${this.url ?? '/'}"`
     );
   }
 
@@ -455,6 +455,9 @@ export function createHandlerFromRoutefromRoute(
     route.method ?? 'GET',
     route.url ?? '/'
   );
+
+  //@ts-ignore
+  handler.handler = route.handler;
 
   // 1. Schemas contributions from interceptors
   for (let contributor of route.requestInterceptor ?? []) {

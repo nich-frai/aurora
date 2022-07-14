@@ -5,9 +5,8 @@ import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import type { TBodySchema } from "schema/body";
 import type { IFile, TFileSchema } from "schema/file";
-import { zodSchemaToJSONShape } from "utils/schema_to_json_shape";
+import { zodSchemaToJSONShape } from "../utils/schema_to_json_shape";
 import { BadRequest, PayloadTooLarge, UnsupportedMediaType } from "../error/http_error";
-import type { Route } from "../route/route.class";
 import { Size } from "../utils/units";
 
 type TBodyParserSchema = {
@@ -135,7 +134,9 @@ async function parseApplicationJSON(
         parsedTarget[propName] = parsed[propName];
       }
     }
-    return parsedTarget;
+    return {
+      body : parsedTarget
+    };
   } catch (err) {
     throw new BadRequest("Could not parse the payload as JSON content!");
   }
@@ -372,10 +373,7 @@ export function createBodyParser(
             : acceptsContentType?.join(', ') ?? 'no acceptable content-type!'}.`
         );
       }
-
-
       const parser = bodyParser[requestContentType];
-
       const parsed = await parser(
         req,
         schema,
@@ -387,7 +385,7 @@ export function createBodyParser(
       if (schema.body != null) {
         let safeParse = schema.body.safeParse(parsed.body);
         if (!safeParse.success) {
-          return new BadRequest(`The provided body have an incorrect shape!\nThe expected body shape is the following: ${JSON.stringify(zodSchemaToJSONShape(schema.body))}`)
+          return new BadRequest(`The provided body have an incorrect shape!\nThe expected body shape is the following: ${JSON.stringify(zodSchemaToJSONShape(schema.body))}\nThe following issues were raised: ${safeParse.error.toString()}`)
         }
         request.body = safeParse.data;
       }
