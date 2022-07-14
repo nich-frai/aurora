@@ -11,8 +11,8 @@ import type { TRequestInterceptor } from "../middleware/request_interceptor";
 import type { TResponseInterceptionMoment, TResponseInterceptor } from "../middleware/response_interceptor";
 import { createBodyParser } from "../parser/body";
 import { createCookieParser, type TCookiesSchema } from "../parser/cookies";
-import { createQueryParser, TQueryParamsSchema } from "../parser/queryParams";
-import { Request, THeadersSchema, TUrlParamsSchema } from "../request/request.class";
+import { createQueryParser, type TQueryParamsSchema } from "../parser/queryParams";
+import { Request, type THeadersSchema, type TUrlParamsSchema } from "../request/request.class";
 import { Response } from "../response/response.class";
 import type { Route } from "../route/route.class";
 
