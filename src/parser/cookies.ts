@@ -4,7 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AnyZodObject, ZodOptional, ZodString } from "zod";
 import { BadRequest } from "../error/http_error";
 
-export type TCookiesSchema = { [name: string]: ZodString | ZodOptional<ZodString> };
+export type TCookiesSchema = { [name: string]: ZodString | ZodOptional<ZodString> | true };
 
 export function cookieParser(cookieStr: string): Record<string, string> {
   if (cookieStr.length === 0) {
@@ -35,8 +35,21 @@ export function createCookieParser(schema: TCookiesSchema): TRawInterceptor {
       const parsedCookies = cookieParser(req.headers['cookie'] ?? '');
       // validate cookie schema
       for (let cookieName in schema) {
-
+        const parser = schema[cookieName];
+        if (parser === true) {
+          if (parsedCookies[cookieName] != null) {
+            continue;
+          } else {
+            return new BadRequest(`This route expects to receive a cookie named ${cookieName} that was not present in the request!\nAll of the cookies expected in this route: ${Object.keys(schema).join(', ')}`);
+          }
+        }
+        const zodParse = parser.safeParse(parsedCookies[cookieName]);
+        if(!zodParse.success) {
+          return new BadRequest(`Validation failed on cookie ${cookieName}!\nReason: ${zodParse.error.issues.toString()}`)
+        }
+        parsedCookies[cookieName] = zodParse.data!;
       }
+      request.cookies = parsedCookies;
     }
   };
 }

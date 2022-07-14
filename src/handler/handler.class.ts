@@ -251,23 +251,6 @@ export class Handler {
       }
     }
 
-    // 4: check for cookies
-    if (this.cookies != null) {
-      let parsedCookies = cookieParser(req.headers['cookie'] ?? '');
-      for (let cookieKey in (this.cookies as TCookiesSchema)) {
-        let parser = (this.cookies as TCookiesSchema)[cookieKey];
-        let value = parsedCookies[cookieKey];
-        let parsed = parser.safeParse(value);
-        if (!parsed.success) {
-          if (value == null) {
-            return new BadRequest(`This route expects a cookie named "${cookieKey}" to be present!`);
-          }
-          return new BadRequest(`A cookie parameter could not be validated! ${parsed.error.toString()}`);
-        }
-        (request.cookies as any)[cookieKey] = parsed.data;
-      }
-    }
-
     // 5: check for url params
     if (this.urlParams != null) {
       for (let urlKey in (this.urlParams as TUrlParamsSchema)) {
