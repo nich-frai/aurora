@@ -1,4 +1,4 @@
-import type { TRawInterceptor, RouteGuard } from "aurora.lib";
+import type { RouteGuard, TRawInterceptor } from "aurora.lib";
 import type { AwilixContainer } from "awilix";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { TBodySchema } from "schema/body";
@@ -10,8 +10,8 @@ import { Logger } from "../logger";
 import type { TRequestInterceptor } from "../middleware/request_interceptor";
 import type { TResponseInterceptionMoment, TResponseInterceptor } from "../middleware/response_interceptor";
 import { createBodyParser } from "../parser/body";
-import { cookieParser, createCookieParser, type TCookiesSchema } from "../parser/cookies";
-import { queryParamsParser, TQueryParamsSchema } from "../parser/queryParams";
+import { createCookieParser, type TCookiesSchema } from "../parser/cookies";
+import { createQueryParser, TQueryParamsSchema } from "../parser/queryParams";
 import { Request, THeadersSchema, TUrlParamsSchema } from "../request/request.class";
 import { Response } from "../response/response.class";
 import type { Route } from "../route/route.class";
@@ -240,47 +240,32 @@ export class Handler {
       for (let headerKey in (this.headers as THeadersSchema)) {
         let parser = (this.headers as THeadersSchema)[headerKey]!;
         let value = request.headers[headerKey];
+        if(parser === true) {
+          if(value != null) continue;
+          else return new BadRequest(`This route requires a header named "${headerKey}" to be present!\nAll of the expected headers: ${Object.keys(this.headers).join(', ')}.`);
+        }
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
-          if (value == null) {
-            return new BadRequest(`This route requires a header named "${headerKey}" to be present!`);
-          }
-          return new BadRequest(`A header parameter could not be validated! ${parsed.error.toString()}`);
+          return new BadRequest(`The provided header "${headerKey}" could not be validated!\n"${value}" presents the following issues: ${parsed.error.toString()}`);
         }
         request.headers[headerKey] = parsed.data;
       }
     }
 
-    // 5: check for url params
+    // 4: check for url params
     if (this.urlParams != null) {
       for (let urlKey in (this.urlParams as TUrlParamsSchema)) {
         let parser = (this.urlParams as TUrlParamsSchema)[urlKey];
         let value = urlParams[urlKey];
+        if(parser === true) {
+          if(value != null) continue;
+          else return new InternalServerError(`There was an error collecting ifnromation from the url!`);
+        }
         let parsed = parser.safeParse(value);
         if (!parsed.success) {
-          if (value == null) {
-            return new BadRequest(`This route expects an URL parameter named "${urlKey}" to be present!`);
-          }
-          return new BadRequest(`An URL parameter could not be validated! ${parsed.error.toString()}`);
+          return new BadRequest(`The provided URL is considered invalid, a piece of it does not conform with the required validations!\n"${value}" presents the following issues: ${parsed.error.toString()}`);
         }
-        (request.urlParams as any)[urlKey] = parsed.data;
-      }
-    }
-
-    // 6: check for query params
-    if (this.queryParams != null) {
-      let parsedQueryParams = queryParamsParser(req.url ?? '');
-      for (let queryKey in (this.queryParams as TQueryParamsSchema)) {
-        let parser = (this.queryParams as TQueryParamsSchema)[queryKey];
-        let value = parsedQueryParams[queryKey];
-        let parsed = parser.safeParse(value);
-        if (!parsed.success) {
-          if (value == null) {
-            return new BadRequest(`This route expects an query parameter named "${queryKey}" to be present!`);
-          }
-          return new BadRequest(`An query parameter could not be validated! ${parsed.error.toString()}`);
-        }
-        (request.queryParams as any)[queryKey] = parsed.data;
+        request.urlParams[urlKey] = parsed.data;
       }
     }
 
@@ -418,8 +403,6 @@ export class Handler {
           'aurora.body.parser',
           'aurora.cookies.parser',
           'aurora.queryParams.parser',
-          'aurora.urlParams.validator',
-          'aurora.headers.validator'
         ].includes(interceptor.name)
       })
     );
@@ -445,6 +428,17 @@ export class Handler {
       );
       this.rawInterceptors = [
         cookieParser,
+        ...this.rawInterceptors
+      ];
+    }
+
+    // 3. the query parser
+    if(this.queryParams != null) {
+      const queryParser = createQueryParser(
+        this.queryParams
+      );
+      this.rawInterceptors = [
+        queryParser,
         ...this.rawInterceptors
       ];
     }

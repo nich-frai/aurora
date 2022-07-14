@@ -4,13 +4,13 @@ import type { TQueryParamsSchema } from 'parser/queryParams';
 import type { TBodySchema } from 'schema/body';
 import type { IFile, TFileSchema } from 'schema/file';
 import type { Class, JsonValue, Merge } from 'type-fest';
-import type { TypeOf, ZodOptional, ZodString } from 'zod';
+import type { TypeOf, ZodOptional, ZodString, ZodType } from 'zod';
 import type { TCookiesSchema } from '../parser/cookies';
 import type { HTTPIncomingHeaders, Route } from '../route/route.class';
 import { toDependencyResolver } from '../utils/to_dependency_resolver';
 
-export type THeadersSchema = { [name in HTTPIncomingHeaders]?: ZodString };
-export type TUrlParamsSchema = { [name: string]: ZodString | ZodOptional<ZodString> };
+export type THeadersSchema = { [name in HTTPIncomingHeaders]?: ZodString | true | ZodOptional<ZodString> };
+export type TUrlParamsSchema = { [name: string]: ZodString | ZodOptional<ZodString> | true };
 
 export class Request<
   Body extends TBodySchema | undefined = undefined,
@@ -43,7 +43,7 @@ export class Request<
     : { [name: string]: string | undefined }
 
   queryParams!: QueryParams extends NonNullable<QueryParams>
-    ? { [name in keyof QueryParams]: TypeOf<QueryParams[name]> }
+    ? { [name in keyof QueryParams]: QueryParams[name] extends ZodType ? TypeOf<QueryParams[name]> : string }
     : {};
 
   cookies!: Cookies extends NonNullable<Cookies>
@@ -109,11 +109,12 @@ export type TRequestType<
       { [name in string]: string | undefined }
     >
   })
-  & (QueryParams extends undefined ? {} : {
-    queryParams: {
-      [name in keyof NonNullable<QueryParams>]: TypeOf<NonNullable<QueryParams>[name]>
+  & (QueryParams extends NonNullable<QueryParams>
+    ? {
+      queryParams: { [name in keyof NonNullable<QueryParams>]: QueryParams[name] extends ZodType ? TypeOf<QueryParams[name]> : string }
     }
-  })
+    : {}
+  )
   & (Files extends NonNullable<Files>
     ? {
       [name in keyof Files['files']]:
