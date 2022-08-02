@@ -103,12 +103,13 @@ export type TRequestType<
       [name in keyof NonNullable<Cookies>]: string
     }
   })
-  & (URLParams extends undefined ? {} : {
+  & (URLParams extends NonNullable<URLParams> ? {
     urlParams: Merge<
-      { [name in keyof NonNullable<URLParams>]: string },
-      { [name in string]: string | undefined }
-    >
-  })
+    { [name in string]: string | undefined },
+    { [name in keyof URLParams]: string }
+    >;
+  } : {}
+  )
   & (QueryParams extends NonNullable<QueryParams>
     ? {
       queryParams: { [name in keyof NonNullable<QueryParams>]: QueryParams[name] extends ZodType ? TypeOf<QueryParams[name]> : string }
