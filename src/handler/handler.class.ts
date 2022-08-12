@@ -190,6 +190,7 @@ export class Handler {
       handlerResponse = await this.handler(request, ...handlerServices);
     } catch (err) {
       if (err instanceof Error) {
+				console.log(err);
         handlerResponse = Response.error(err)
       } else {
         // TODO: throw something inside a function, should I create a new error?
@@ -240,7 +241,7 @@ export class Handler {
       for (let headerKey in (this.headers as THeadersSchema)) {
         let parser = (this.headers as THeadersSchema)[headerKey]!;
         let value = request.headers[headerKey];
-        if(parser === true) {
+        if(typeof parser === 'boolean') {
           if(value != null) continue;
           else return new BadRequest(`This route requires a header named "${headerKey}" to be present!\nAll of the expected headers: ${Object.keys(this.headers).join(', ')}.`);
         }

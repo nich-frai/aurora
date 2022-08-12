@@ -28,6 +28,10 @@ export class Response {
         name: err.name,
         message: err.message,
       });
+
+			if(status == null) {
+				r.status(500);
+			}
     }
 
     if (status != null) {

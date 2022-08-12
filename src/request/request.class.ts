@@ -9,7 +9,7 @@ import type { TCookiesSchema } from '../parser/cookies';
 import type { HTTPIncomingHeaders, Route } from '../route/route.class';
 import { toDependencyResolver } from '../utils/to_dependency_resolver';
 
-export type THeadersSchema = { [name in HTTPIncomingHeaders]?: ZodString | true | ZodOptional<ZodString> };
+export type THeadersSchema = { [name in HTTPIncomingHeaders]?: ZodString | boolean | ZodOptional<ZodString> };
 export type TUrlParamsSchema = { [name: string]: ZodString | ZodOptional<ZodString> | true };
 
 export class Request<

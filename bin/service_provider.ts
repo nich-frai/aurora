@@ -5,6 +5,7 @@ import { isClass } from '../src/utils/is_class';
 import { pathToFileURL } from 'node:url';
 import { isFunction } from '../src/utils/is_function';
 import { toDependencyResolver } from '../src/utils/to_dependency_resolver';
+import { DependencyLifetime, DependencyName } from '../src/aurora.lib';
 export interface IServiceProvider {
 	provideServices(): Record<string, Resolver<any>> | Promise<Record<string, Resolver<any>>>;
 }
@@ -19,7 +20,7 @@ export function isServiceProvider(o: any): o is IServiceProvider {
 	return (
 		o != null
 		&& typeof o === 'object'
-		&& typeof o.provideRoutes === 'function'
+		&& typeof o.provideServices=== 'function'
 	);
 }
 
@@ -32,10 +33,7 @@ export function isServiceObservable(o: any): o is IServiceObservable {
 	);
 }
 
-const isServiceFile = /(?<name>.+)\.service\.(m|c)?js$/;
-
-export const DependencyName = Symbol('DependencyName');
-export const DependencyLifetime = Symbol('DependencyLifetime');
+const isServiceFile = /(?<name>.+)\.service\.(m|c)?(j|t)s$/;
 
 export class AuroraServiceProvider implements IServiceProvider {
 

@@ -10,4 +10,9 @@ export { Request } from './request/request.class';
 export * as http from './http.lib';
 export * as unit from './utils/units';
 
+export * from './error/http_error';
+
 export { z, type TypeOf } from 'zod';
+
+export const DependencyName = Symbol('DependencyName');
+export const DependencyLifetime = Symbol('DependencyLifetime');
