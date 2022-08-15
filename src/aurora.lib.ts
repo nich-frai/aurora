@@ -4,7 +4,7 @@ export { createRequestInterceptor, type TRequestInterceptor } from './middleware
 export { createResponseInterceptor, type TResponseInterceptor, type TResponseInterceptionMoment} from './middleware/response_interceptor';
 export { createGuard, type RouteGuard, type IRouteGuard } from './middleware/guard';
 export { createController, Controller, type ICreateController } from './controller/controller.class';
-
+export { Response } from './response/response.class';
 export { Request } from './request/request.class';
 
 export * as http from './http.lib';

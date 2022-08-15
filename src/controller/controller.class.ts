@@ -42,9 +42,9 @@ export class Controller<
       // merge schemas
       if (route.body != null) {
         if (this.body != null) {
-          route.body = route.body!
-        } else {
           route.body = route.body!.merge(this.body!) as any;
+        } else {
+          route.body = this.body!
         }
       } else {
         route.body = this.body;

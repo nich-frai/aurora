@@ -83,7 +83,7 @@ const DEFAULT_ROUTE_MATCHER : TFilenameMatcher = new RegExp(`(?<name>.+?)\\.(?<m
   })\\.(m|c)?(j|t)s$` // load extensions .mts .cts .mjs .cjs .ts .js
 );
 
-const DEFAULT_CONTROLLER_MATCHER : TFilenameMatcher = /__\.(controller|middleware)\.(t|j)s$/;
+const DEFAULT_CONTROLLER_MATCHER : TFilenameMatcher = /__(controller|middleware)\.(t|j)s$/;
 const DEFAULT_INDEX_PATTERN : string | RegExp = 'index';
 
 export class AuroraRouteAutoloader extends EventEmitter implements IRouteObservable {
