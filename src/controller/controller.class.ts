@@ -36,16 +36,14 @@ export class Controller<
       // preppend interceptors and guards
       route.rawInterceptor = [...this.rawInterceptor ?? [], ...route.rawInterceptor ?? []];
       route.requestInterceptor = [...this.interceptRequest ?? [], ...route.requestInterceptor ?? []];
-      route.responseInterceptor = [...this.interceptResponse ?? [], ...route.responseInterceptor ?? []];
       route.guards = [...this.guard ?? [], ...route.guards ?? []] as any[];
+      route.responseInterceptor = [...this.interceptResponse ?? [], ...route.responseInterceptor ?? []];
 
       // merge schemas
       if (route.body != null) {
         if (this.body != null) {
           route.body = route.body!.merge(this.body!) as any;
-        } else {
-          route.body = this.body!
-        }
+        } 
       } else {
         route.body = this.body;
       }

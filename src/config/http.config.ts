@@ -2,7 +2,7 @@ import type { SecureContextOptions, TlsOptions } from "node:tls";
 
 export const HttpConfiguration: THttpConfiguration = {
   server: {
-    host: '127.0.0.1',
+    host: 'localhost',
     port: 4001
   },
   route: {
