@@ -1,4 +1,4 @@
-#!/usr/bin/env node --loader tsx
+#!/usr/bin/env node --loader tsx watch
 import { DevelopmentEnvironment } from './scripts/dev';
 import { print, println } from './utils/print';
 import kleur from 'kleur';
@@ -26,7 +26,6 @@ const env = new DevelopmentEnvironment({
     path.join(process.cwd(), 'src', 'services')
   )
 });
-
 
 env
   .start()

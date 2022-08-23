@@ -1,6 +1,4 @@
-import type { FileInfo } from "busboy";
 import type { File } from "formidable";
-import type { Readable } from "node:stream";
 
 export function mergeFileSchema(
 	...schema : any[]
