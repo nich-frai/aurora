@@ -1,6 +1,9 @@
 import type { AwilixContainer } from 'awilix';
 import createLogger, { type Logger as Pino } from 'pino';
 import kleur from 'kleur';
+import path from 'node:path';
+import { mkdir, mkdirSync, stat, statSync } from 'node:fs';
+import { dir } from 'node:console';
 
 export class Logger {
 
@@ -17,6 +20,30 @@ export class Logger {
 
   private static getInstance(container: AwilixContainer) {
     if (!Logger.#instance.has(container)) {
+			// make sure teh directories from that the logs are placed in exist!
+
+			const transports =  container.resolve("aurora.logger.config");
+
+			for(let transport of transports?.targets) {
+				if(transport.target === 'pino/file') {
+					let pathToLogDirectory = path.dirname(path.resolve(process.cwd(), transport.options.destination));
+					let dirExists = false;
+					try {
+						const dirStat = statSync(pathToLogDirectory);
+						if(dirStat.isDirectory()) {
+							dirExists = true;
+						} else {
+							console.warn(`[Logger] log specified path (${pathToLogDirectory}) is not a directory!`);
+						}
+					} catch(err) {}
+
+					if(!dirExists) {
+						console.log(`[Logger] Directory to log file (${pathToLogDirectory}) did not exist! Creating it: `);
+						mkdirSync(pathToLogDirectory, { recursive : true});
+					}
+				}
+			}
+
       const loggerTransports = createLogger.transport(
         container.resolve("aurora.logger.config")
       );
