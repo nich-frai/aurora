@@ -1,6 +1,6 @@
 import type { HTTPMethod } from "find-my-way";
 import { EventEmitter } from "node:events";
-import { promises as fs } from "node:fs";
+import fs from "node:fs";
 import { default as path } from 'node:path';
 import { pathToFileURL } from "node:url";
 import { defaultModuleLoader } from "../src/utils/module_loader";
@@ -123,7 +123,7 @@ export class AuroraRouteAutoloader extends EventEmitter implements IRouteObserva
 
 	async autoloadHttpRoutes(from: string, baseDir: string = '') {
 
-		const currentDir = await fs.readdir(from, { withFileTypes: true });
+		const currentDir = fs.readdirSync(from, { withFileTypes: true });
 		const allRoutes: Route[] = [];
 		const allControllers: Controller[] = [];
 	
@@ -235,7 +235,7 @@ export async function defaultRouteModuleLoader(
   name = convertFilenameToURLParameters(name! ?? '');
 
   // check if importing a directory
-  const statFromFilepath = await fs.stat(filepath);
+  const statFromFilepath = fs.statSync(filepath);
   if (statFromFilepath.isDirectory()) {
     filepath = `${filepath}${path.sep}index.js`;
   }
