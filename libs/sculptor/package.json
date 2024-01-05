@@ -1,0 +1,21 @@
+{
+  "name": "@aurora/sculptor",
+  "description": "UI library for common elements inside aurora",
+  "version": "1.0.0",
+  "type": "module",
+  "author": {
+    "name": "Nicholas Frai"
+  },
+  "scripts": {},
+  "imports": {},
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.1",
+    "@types/node": "^20.10.6",
+    "@web-types/lit": "2.0.0-3",
+    "ts-lit-plugin": "^2.0.1"
+  },
+  "peerDependencies": {
+    "lit": "^3.1.0"
+  }
+}

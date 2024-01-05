@@ -1,0 +1,18 @@
+{
+  "name": "@aurora/spark",
+  "description": "Framework backend em typescript",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build" : "tsc --build --clean",
+    "build:w" : "tsc --build --clean && tsc --build --watch"
+  },
+  "bin": {
+    "spark": "./dist/bin/cli.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "kleur": "^4.1.5",
+    "typescript": "^5.3.3"
+  }
+}

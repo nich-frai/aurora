@@ -1,0 +1,11 @@
+{
+  "name": "@aurora/test-spark",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "spark dev"
+  },
+  "devDependencies": {
+    "@aurora/spark": "workspace:*"
+  }
+}

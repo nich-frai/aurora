@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "ts-lit-plugin"
+      }
+    ],
+
+    "target": "ESNext",
+    "module": "NodeNext",
+
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+
+    "moduleResolution": "NodeNext",
+    "baseUrl": "./src",
+    "paths": {},
+
+    "strict": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["./src/**/*.ts", "./src/**/*.json"]
+}
